@@ -1,21 +1,29 @@
 import React from 'react'
 import { Button, Modal, Input, Loader, Message, Icon } from 'semantic-ui-react'
 import AdditionalInfoForm from '../AdditionalInfoForm'
-import { User, UserFactory } from '../../types/User'
-import RTCManager from '../../RTCManager'
+import { User } from '../../types/User'
+import RTCManager from '../../utils/RTCManager'
+import DB from '../../utils/db'
 
 type AddContactModalProps = {
-  selfID: string
+  self: User,
+  callback: (contact: User) => void
 }
 
 type AddContactModalState = {
   contactID: string | undefined,
   activeStep: 1 | 2 | 3 | 'error',
-  modalOpen: boolean
+  modalOpen: boolean,
+  addedUser: User | undefined
 }
 
 export default class AddContactModal extends React.PureComponent<AddContactModalProps, AddContactModalState> {
-  private static readonly defaultState: AddContactModalState = { contactID: undefined, activeStep: 1, modalOpen: false }
+  private static readonly defaultState: AddContactModalState = {
+    contactID: undefined,
+    activeStep: 1,
+    modalOpen: false,
+    addedUser: undefined
+  }
 
   constructor (props) {
     super(props)
@@ -32,17 +40,21 @@ export default class AddContactModal extends React.PureComponent<AddContactModal
 
   handleIDInput = (contactID) => {
     this.setState({ contactID, activeStep: 2 })
-    // TODO: Handle it for real
-    // setTimeout(() => { this.setState({ activeStep: Math.random() > 0.2 ? 3 : 'error' })}, 1000)
-    RTCManager.Instance.requestConnection(this.props.selfID, contactID).then(() => {
-      this.setState({ activeStep: 3 })
+    RTCManager.Instance.requestConnection(this.props.self, contactID, true).then((userInfo: User) => {
+      if (userInfo === undefined) {
+        this.setState({ activeStep: 'error' })
+      } else {
+        this.setState({ activeStep: 3, addedUser: userInfo })
+      }
     }, () => {
       this.setState({ activeStep: 'error' })
     })
   }
 
   handleCompletion = (contact: User) => {
-    // TODO: persist contact
+    DB.Instance.putContact(contact).then(() => {
+      this.props.callback(contact)
+    })
     this.handleClose()
   }
 
@@ -62,8 +74,7 @@ export default class AddContactModal extends React.PureComponent<AddContactModal
         <Modal.Header>Add Contact</Modal.Header>
         {step === 1 ? <InputIDPage initialID={this.state.contactID} handler={this.handleIDInput} />
           : step === 2 ? <ConnectingPage />
-          : step === 3 ? <CustomizeInfoPage user={UserFactory.create('dabc145', 'Tim', 'Thompson')}
-                            submitHandler={this.handleCompletion} />
+          : step === 3 ? <CustomizeInfoPage user={this.state.addedUser} submitHandler={this.handleCompletion} />
           : <ErrorPage cancelHandler={this.handleClose} retryHandler={this.handleReset} />}
       </Modal>
     )

@@ -20,3 +20,15 @@
 .peerchat-id {
     overflow-wrap: break-word;
 }
+
+/* Ensure chat window scrolls so that rest of UI—including chat bar—remains visible */
+.chat-list {
+    overflow-y: auto;
+    max-height: 60vh;
+    max-width: 100% !important;
+}
+
+/* Make account deletion overlay opaque */
+.account-deletion-overlay {
+    background-color: rgba(0, 0, 0, 1);
+}

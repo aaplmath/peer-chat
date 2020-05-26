@@ -3,52 +3,31 @@ import ContactsList from './ContactsList'
 import { Container, Grid } from 'semantic-ui-react'
 import TopMenu from './TopMenu'
 import ChatPane from './chat-pane/ChatPane'
-import { User, UserFactory } from '../types/User'
-import { ChatMessage, ChatMessageFactory, SenderType } from '../types/ChatMessage'
+import { User } from '../types/User'
 import FirstVisitModal from './modals/FirstVisitModal'
-import DB from '../db'
-import Crypto from '../Crypto'
-import RTCManager from '../RTCManager'
+import DB from '../utils/db'
+import Crypto from '../utils/Crypto'
+import AccountDeletedOverlay from './AccountDeletedOverlay'
+import '../styles/defaults.css'
+require('semantic-ui-css/semantic.min.css')
 
 type AppState = {
   selectedContact?: User,
   self: User,
   contacts: User[],
-  activeMessages: ChatMessage[],
-  needsInitialization: boolean
+  needsInitialization: boolean,
+  accountDeleted: boolean
 }
 
-// const CONTACTS = [
-//   UserFactory.create('abc123', 'Tom', 'Jones', null),
-//   UserFactory.create('abc143', 'Jane', 'Jackson', '🐮'),
-//   UserFactory.create('def134', 'Lucy', 'Carlson', null),
-//   UserFactory.create('rt312f', null, null, null)
-// ]
-//
-// const MESSAGES = {
-//   'abc123': [
-//     ChatMessageFactory.create(SenderType.EXT,'abc123', 'myid123', new Date('4/21/2019 09:21:22'), 'Hello, there!'),
-//     ChatMessageFactory.create(SenderType.ME,'myid123', 'abc123', new Date('4/21/2019 09:21:54'), 'What\'s up?'),
-//     ChatMessageFactory.create(SenderType.EXT,'abc123', 'myid123', new Date('4/21/2019 09:22:29'), 'Oh, the usual.')
-//   ],
-//   'abc143': [],
-//   'def134': [],
-//   'rt312f': []
-// }
-
-// const USER_INFO = UserFactory.create('myid123', 'Logdee', 'Nyuzer', '🐿')
-
 export default class App extends React.PureComponent<{}, AppState> {
-  readonly state = { selectedContact: undefined, self: undefined, contacts: [], activeMessages: [], needsInitialization: false }
+  readonly state = { selectedContact: undefined, self: undefined, contacts: [], needsInitialization: false, accountDeleted: false }
 
   // Called when contact selected in sidebar
   contactSelectHandler = selectedContact => {
     if (!selectedContact) {
-      this.setState({ selectedContact: undefined, activeMessages: [] })
+      this.setState({ selectedContact: undefined })
     } else {
-      DB.Instance.getChatMessages(selectedContact.id).then(activeMessages => {
-        this.setState({ selectedContact, activeMessages })
-      })
+      this.setState({ selectedContact })
     }
   }
 
@@ -79,6 +58,22 @@ export default class App extends React.PureComponent<{}, AppState> {
     })
   }
 
+  handleNewContact = (contact) => {
+    this.setState(state => ({ contacts: state.contacts.concat(contact) }))
+  }
+
+  handleContactUpdate = (contact: User) => {
+    this.setState(state => ({ contacts: state.contacts.map(cnt => cnt.id === contact.id ? contact : cnt) }))
+    // For now, the updated contact is always the selected contact, but in a better-designed version of the app, that might not be true…
+    if (contact.id === this.state.selectedContact.id) {
+      this.contactSelectHandler(contact)
+    }
+  }
+
+  handleAccountDeletion = () => {
+    this.setState({ accountDeleted: true })
+  }
+
   componentDidMount () {
     DB.Instance.getContacts().then(contacts => {
       this.setState({ contacts: contacts })
@@ -94,23 +89,23 @@ export default class App extends React.PureComponent<{}, AppState> {
   }
 
   render () {
-    const { self, contacts, selectedContact, activeMessages, needsInitialization } = this.state
-    return (
+    const { self, contacts, selectedContact, needsInitialization, accountDeleted } = this.state
+    return !accountDeleted ? (
       <>
-        <FirstVisitModal open={needsInitialization} userID={self?.id} callback={this.handleInitialization} />
+        <FirstVisitModal open={needsInitialization} selfID={self?.id} callback={this.handleInitialization} />
         {/* Wait to render top menu until we have a self to avoid pointless headache with derived state */}
-        {self && <TopMenu userInfo={self} updateHandler={this.handleSelfFieldUpdate} />}
+        {self && <TopMenu userInfo={self} updateHandler={this.handleSelfFieldUpdate} profileDeletionHandler={this.handleAccountDeletion} />}
         <Container>
           <Grid>
             <Grid.Column width={4}>
-              <ContactsList contacts={contacts} selectionHandler={this.contactSelectHandler} selfID={self?.id} />
+              <ContactsList contacts={contacts} selectionHandler={this.contactSelectHandler} self={self} newContactHandler={this.handleNewContact} />
             </Grid.Column>
             <Grid.Column width={12}>
-              <ChatPane contact={selectedContact} messages={activeMessages} />
+              <ChatPane contact={selectedContact} self={self} contactUpdateHandler={this.handleContactUpdate} />
             </Grid.Column>
           </Grid>
         </Container>
       </>
-    )
+    ) : ( <AccountDeletedOverlay /> )
   }
 }

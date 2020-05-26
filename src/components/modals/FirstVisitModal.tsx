@@ -4,7 +4,7 @@ import AdditionalInfoForm from '../AdditionalInfoForm'
 
 type FirstVisitModalProps = {
   open: boolean,
-  userID: string | undefined,
+  selfID: string | undefined,
   callback: (firstName: string | undefined, lastName: string | undefined, avatar: string | undefined) => void
 }
 
@@ -53,18 +53,18 @@ export default class FirstVisitModal extends React.PureComponent<FirstVisitModal
           <p>Below is your PeerChat ID, an anonymous identifier you'll need in order to chat with others.
             You can access it at any time from your profile.</p>
           <Divider />
-          <p>Your PeerChat ID: <strong className='peerchat-id'>{this.props.userID || 'Loading…'}</strong></p>
-          {this.props.userID && (
+          <p>Your PeerChat ID: <strong className='peerchat-id'>{this.props.selfID || 'Loading…'}</strong></p>
+          {this.props.selfID && (
             <>
               <Divider />
               <p>Below, you may optionally choose to associate further information with your profile.
                 This information will be shared with anyone with whom you chat.
                 You may change, add, or remove it at any time from your profile.</p>
-              <AdditionalInfoForm userInfo={{ id: this.props.userID }} handleInput={this.handleInput} />
+              <AdditionalInfoForm userInfo={{ id: this.props.selfID }} handleInput={this.handleInput} />
             </>
           )}
         </Modal.Content>
-        {this.props.userID &&
+        {this.props.selfID &&
         <Modal.Actions>
           <Button primary onClick={this.handleClose}><Icon name='checkmark' />Done</Button>
         </Modal.Actions>

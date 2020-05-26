@@ -15,7 +15,8 @@ const DESC = -1
 type ContactsListProps = {
   contacts: User[],
   selectionHandler: (contact: User) => void,
-  selfID: string
+  newContactHandler: (contact: User) => void,
+  self: User | undefined
 }
 
 type ContactsListState = {
@@ -30,13 +31,19 @@ type ContactsListState = {
 export default class ContactsList extends React.PureComponent<ContactsListProps, ContactsListState> {
   readonly state = { activeID: undefined, searchInput: '', sortOrder: SortOrder.LAST_DESC }
 
-  handleClick = (event, { name }) => {
+  handleContactClick = (event, { name }) => {
     this.setState(state => ({ activeID: name === state.activeID ? undefined : name }), () => {
       this.props.selectionHandler(this.props.contacts.find(contact => contact.id === this.state.activeID))
     })
   }
 
-  handleInput = (event, { value }) => {
+  handleNewContact = (contact: User) => {
+    this.props.newContactHandler(contact)
+    this.setState({ activeID: contact.id })
+    this.props.selectionHandler(contact)
+  }
+
+  handleSearchInput = (event, { value }) => {
     this.setState({ searchInput: value })
   }
 
@@ -114,12 +121,12 @@ export default class ContactsList extends React.PureComponent<ContactsListProps,
               <Header as='h3'>Contacts</Header>
             </Grid.Column>
             <Grid.Column width={4}>
-              <AddContactModal selfID={this.props.selfID} />
+              {this.props.self && <AddContactModal self={this.props.self} callback={this.handleNewContact} /> }
             </Grid.Column>
           </Grid.Row>
           <Grid.Row>
             <Grid.Column width={16}>
-              <Input style={{ 'minWidth': 'unset', 'width': '100%' }} icon='search' placeholder='Search contacts&hellip;' value={this.state.searchInput} onChange={this.handleInput}/>
+              <Input style={{ 'minWidth': 'unset', 'width': '100%' }} icon='search' placeholder='Search contacts&hellip;' value={this.state.searchInput} onChange={this.handleSearchInput}/>
             </Grid.Column>
           </Grid.Row>
           <Grid.Row>
@@ -137,7 +144,7 @@ export default class ContactsList extends React.PureComponent<ContactsListProps,
 
         <List selection relaxed>
           {this.sortedContacts().map((contact, idx) => (
-              <List.Item name={contact.id} active={this.state.activeID === contact.id} key={idx} onClick={this.handleClick}>
+              <List.Item name={contact.id} active={this.state.activeID === contact.id} key={idx} onClick={this.handleContactClick}>
                 <List.Content>
                   <List.Header>{UserUtils.fullNameWithLeadingAvatar(contact)}</List.Header>
                 </List.Content>

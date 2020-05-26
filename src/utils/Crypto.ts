@@ -50,6 +50,7 @@ export default class Crypto {
    * @return true if the signature is verified, and false if it is not.
    */
   static async verifyMessage (message: SignedMessage, publicKey: string) {
+    // TODO: Fix the below
     const exportedKey = Uint8Array.from(
       [4].concat( // restore leading 4 that we removed when generating ID
         publicKey.match(/.{1,2}/g) // split string into fragments corresponding to original bytes
@@ -57,9 +58,9 @@ export default class Crypto {
                             | (parseInt(byteStr[1], 16) & 0xf)) // get place values back where they should be
       )
     )
-    const key = await crypto.subtle.importKey('raw', exportedKey, this.ECDSA_KEYGEN_CONFIG, true, ['sign', 'verify'])
+    const key = await crypto.subtle.importKey('raw', exportedKey, this.ECDSA_KEYGEN_CONFIG, true, ['verify'])
     const msgBuf = Crypto.strToBuf(JSON.stringify(message.message))
-    return crypto.subtle.verify(this.ECDSA_SIGN_CONFIG, key, message.signature, msgBuf)
+    return crypto.subtle.verify(this.ECDSA_SIGN_CONFIG, key, Uint8Array.from(message.signature), msgBuf)
   }
 
   private static strToBuf<T extends string> (str: T): Uint16Array {

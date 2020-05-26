@@ -1,7 +1,7 @@
 import PouchDB from 'pouchdb'
 import PouchDBFind from 'pouchdb-find'
-import { ChatMessage } from './types/ChatMessage'
-import { User } from './types/User'
+import { ChatMessage } from '../types/ChatMessage'
+import { User } from '../types/User'
 import Crypto from './Crypto'
 
 enum DocType {
@@ -44,7 +44,7 @@ const cyrb53 = function (str, seed = 0) {
 // TODO: ERROR HANDLING!
 export default class DB {
   private static _instance: DB
-  private db: PouchDB.Database<Docs> // FIXME: readonly
+  private readonly db: PouchDB.Database<Docs>
 
   public static get Instance () {
     return this._instance || (this._instance = new this())
@@ -55,23 +55,17 @@ export default class DB {
     this.db = new PouchDB('peerchat-db', { auto_compaction: true })
     this.db.createIndex({
       index: {
-        fields: ['senderID', 'timestamp', 'type'],
-        name: 'msgIndex'
+        fields: ['senderID', 'recipientID', 'timestamp', 'type'],
+        ddoc: 'primary',
+        name: 'msg-index'
       }
     })
   }
 
   public async getChatMessages (senderID: string) {
-    this.db.getIndexes().then((idxs) => console.log(idxs))
-    const res = await this.db.find({
-      selector: {
-        senderID: senderID,
-        timestamp: { $gt: null }, // PouchDB language for "fetch w/o restriction"—we need it for our sort
-        type: DocType.MESSAGE
-      },
-      sort: [{ senderID: 'asc', timestamp: 'asc', type: 'asc' }] // We have to sort on everything—I swear, whoever designed PouchDB…
-    })
-    return res.docs as ChatMessage[]
+    const messages = (await this.getMessagesForContact(senderID)).docs as ChatMessage[]
+    // It would be lovely to use PouchDB's built-in sort—unfortunately, it's a total mess
+    return messages.sort((a, b) => a.timestamp > b.timestamp ? 1 : -1)
   }
 
   public async getContacts () {
@@ -115,7 +109,7 @@ export default class DB {
    * @param chatMessage the message to write to the database.
    */
   public addChatMessage (chatMessage: ChatMessage) {
-    const hash = cyrb53(chatMessage.timestamp) ^ cyrb53(chatMessage.senderID)
+    const hash = cyrb53(chatMessage.timestamp.toString()) ^ cyrb53(chatMessage.senderID)
     const doc = {
       ...chatMessage,
       '_id': hash.toString(16),
@@ -200,11 +194,34 @@ export default class DB {
   }
 
   /**
-   * Deletes the contact with the specified ID.
+   * Deletes the contact with the specified ID AND all chat messages they sent or received.
    * @param contactID the ID of the contact to delete.
    */
   public async removeContact (contactID: string) {
     const doc = await this.db.get(contactID)
-    this.db.remove(doc)
+    await this.db.remove(doc)
+    const messageDocs = (await this.getMessagesForContact(contactID)).docs
+    return this.db.bulkDocs(messageDocs.map(obj => ({ ...obj, _deleted: true })))
+  }
+
+  public async destroy () {
+    return this.db.destroy()
+  }
+
+  private getMessagesForContact (contactID: string) {
+    return this.db.find({
+      selector: {
+        $and: [
+          { $or: [
+              { senderID: contactID },
+              { recipientID: contactID }
+          ]},
+          { timestamp: { $gt: null } }, // PouchDB language for "fetch w/o restriction"—we need it for our sort
+          { type: DocType.MESSAGE }
+        ]
+      }
+      // use_index: ['primary', 'msg-index'],
+      // sort: [{ timestamp: 'asc' }] // We have to sort on everything—I swear, whoever designed PouchDB…
+    })
   }
 }

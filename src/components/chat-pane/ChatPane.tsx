@@ -3,18 +3,22 @@ import { Segment } from 'semantic-ui-react'
 import { User } from '../../types/User'
 import ActiveContactPane from './ActiveContactPane'
 import NoContactPane from './NoContactPane'
-import { ChatMessage } from '../../types/ChatMessage'
 
 type ChatPaneProps = {
   contact?: User,
-  messages?: ChatMessage[]
+  self: User | undefined,
+  contactUpdateHandler: (contact: User) => void
 }
 
 export default class ChatPane extends React.PureComponent<ChatPaneProps> {
   render () {
+    const ready = this.props.contact && this.props.self
     return (
-      <Segment placeholder={!this.props.contact}>
-        {this.props.contact ? <ActiveContactPane contact={this.props.contact} messages={this.props.messages} /> : <NoContactPane />}
+      <Segment placeholder={!ready}>
+        {ready ? <ActiveContactPane contact={this.props.contact}
+                                    self={this.props.self}
+                                    contactUpdateHandler={this.props.contactUpdateHandler} />
+          : <NoContactPane />}
       </Segment>
     )
   }

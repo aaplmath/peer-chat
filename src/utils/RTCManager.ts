@@ -1,5 +1,5 @@
-import { ChatMessage } from './types/ChatMessage'
-import { User } from './types/User'
+import { ChatMessage, SenderType } from '../types/ChatMessage'
+import { User } from '../types/User'
 import Crypto from './Crypto'
 
 enum SocketMessageType {
@@ -7,13 +7,29 @@ enum SocketMessageType {
   ANSWER = 'A',
   CANDIDATE = 'C'
 }
-type SocketMessage = {
-  type: SocketMessageType,
-  payload: RTCSessionDescriptionInit | RTCIceCandidate | string
+
+type SocketMessageT<T extends SocketMessageType, U extends RTCSessionDescriptionInit | RTCIceCandidate> = {
+  type: T,
+  payload: U
 }
+
+type SocketDescMessage = SocketMessageT<SocketMessageType.ANSWER | SocketMessageType.OFFER, RTCSessionDescriptionInit>
+type SocketCandMessage = SocketMessageT<SocketMessageType.CANDIDATE, RTCIceCandidate>
+
+type SocketMessage = SocketDescMessage | SocketCandMessage
+
 export type SignedMessage = {
-  signature: ArrayBuffer,
+  signature: number[] | Uint8Array, // socket.io changes Uint8Array to number[] anyway
   message: SocketMessage
+}
+
+type ConnectionConfig = {
+  isInitiator: boolean | undefined,
+  isNewContact: boolean | undefined,
+  selfContactInfo: User | undefined,
+  timeout: number | undefined,
+  connected: boolean,
+  contactID: string | undefined
 }
 
 // TODO: Error handling
@@ -23,9 +39,21 @@ export default class RTCManager {
 
   private connection: RTCPeerConnection
   private channel: RTCDataChannel
-  private isInitiator: boolean | undefined = undefined
   private socket: SocketIOClient.Socket
+
   private pendingPromise = { resolve: undefined, reject: undefined }
+
+  public onchatmessage = (msg: ChatMessage) => {}
+  public onconnectionchange = (connected: boolean) => {}
+
+  public currentConfig: ConnectionConfig = {
+    isInitiator: undefined,
+    isNewContact: undefined,
+    selfContactInfo: undefined,
+    timeout: undefined,
+    connected: false,
+    contactID: undefined
+  }
 
   public static get Instance () {
     return this._instance || (this._instance = new this())
@@ -35,16 +63,21 @@ export default class RTCManager {
 
   /**
    * Requests of the server a connection with the specified user.
-   * @param selfID the own user's ID.
+   * @param self the own user's User object.
    * @param recipientID the ID of the user to whom to connect.
+   * @param isNewContact whether this is a newly added contact (false if it's from the existing contacts list).
    */
-  public requestConnection (selfID: string, recipientID: string) {
+  public requestConnection = (self: User, recipientID: string, isNewContact: boolean) => {
+    this.currentConfig.isNewContact = isNewContact
+    this.currentConfig.selfContactInfo = self
+    this.currentConfig.contactID = recipientID
+    this.currentConfig.connected = false
     this.initializePeerConnection()
     if (!this.socket) {
       this.socket = io.connect('http://localhost:8080', { secure: false })
       this.socket.on('message', (msg) => { this.onSocketMessage(msg, recipientID) })
-      this.socket.on('send offer', () => { this.isInitiator = true })
-      this.socket.on('await offer', () => { this.isInitiator = false })
+      this.socket.on('send offer', () => { this.currentConfig.isInitiator = true })
+      this.socket.on('await offer', () => { this.currentConfig.isInitiator = false })
       this.socket.on('begin connection', this.onBeginConnection)
       this.socket.on('abandon', this.onRequestFailure)
     } else {
@@ -53,18 +86,32 @@ export default class RTCManager {
 
     console.log('sending connection request to server')
     this.socket.emit('request connection',{
-      sender: selfID,
+      sender: self.id,
       recipient: recipientID
     })
-    const promise = new Promise((res, rej) => {
-      this.pendingPromise.resolve = res || (() => {})
+    const promise = new Promise((res: (data?: User) => void, rej: () => void) => {
+      this.pendingPromise.resolve = (data?: User) => {
+        window.clearTimeout(this.currentConfig.timeout)
+        res(data)
+      }
       this.pendingPromise.reject = rej || (() => {})
     })
-    window.setTimeout(this.onRequestFailure, this.REQ_TIMEOUT_MILLIS)
+    this.currentConfig.timeout = window.setTimeout(this.onRequestFailure, this.REQ_TIMEOUT_MILLIS)
     return promise
   }
 
-  private initializePeerConnection () {
+  /**
+   * Sends a chat message over the data channel if the connection allows.
+   * @param message the message to send.
+   */
+  public sendMessage = (message: ChatMessage) => {
+    if (this.currentConfig.connected && this.channel.readyState === 'open') {
+      // TODO: sign this
+      this.channel.send(JSON.stringify(message))
+    }
+  }
+
+  private initializePeerConnection = () => {
     console.log('initializing peer connection')
     const configuration: RTCConfiguration = {
       iceServers: [{
@@ -83,19 +130,23 @@ export default class RTCManager {
   }
 
   private onDataChannel = (event: any | { channel: RTCDataChannel }) => {
-    console.log('data channel established')
+    console.log(`data channel ${event.channel.label} established`)
     this.channel = event.channel
-    this.channel.onmessage = this.onMessage
+    console.log(this.channel.label + ' channel is stored')
+    if (this.currentConfig.isNewContact) {
+      this.channel.addEventListener('open', this.sendInitialContactInfo)
+    }
+    this.channel.addEventListener('message', this.onMessage)
   }
 
   private onMessage = event => {
     const data: ChatMessage | User = JSON.parse(event.data)
     if ('id' in data) {
-      // it's a user profile
+      if (this.pendingPromise.resolve) this.pendingPromise.resolve(data)
     } else {
-      // it's a chat message
+      data.senderType = SenderType.EXT // the sender will have considered it a "ME" message, so flip
+      this.onchatmessage(data)
     }
-    // do something with msg
   }
 
   private onConnectionStateChange = event => {
@@ -103,15 +154,23 @@ export default class RTCManager {
     switch (this.connection.connectionState) {
       case 'connected':
         // The connection has become fully connected
-        this.pendingPromise.resolve()
         this.socket.disconnect()
+        if (!this.currentConfig.isNewContact) {
+          this.pendingPromise.resolve()
+        }
+        this.currentConfig.connected = true
+        this.onconnectionchange(true)
         break
       case 'disconnected':
       case 'failed':
         // One or more transports has terminated unexpectedly or in an error
+        this.currentConfig.connected = false
+        this.onconnectionchange(false)
         this.onRequestFailure()
         break
       case 'closed':
+        this.onconnectionchange(false)
+        this.currentConfig.connected = false
       default:
         break
     }
@@ -133,7 +192,7 @@ export default class RTCManager {
   }
 
   private onBeginConnection = () => {
-    if (this.isInitiator) {
+    if (this.currentConfig.isInitiator) {
       console.log('beginning connection as initiator')
       const channel = this.connection.createDataChannel('chat-channel')
       this.onDataChannel({ channel })
@@ -145,26 +204,22 @@ export default class RTCManager {
     }
   }
 
-  // TODO: signature verification, safety checking, don't set offers/answers without verifying that
-  //  we're expecting them (e.g., we might actually be the initiator/receiver)
-  private onSocketMessage = (message: any, senderID: string) => {
-    console.log('got a socket message')
-    if (!this.verifyMessageFormat(message)) return // message is corrupt
+  private onSocketMessage = (unsafeMsg: any, senderID: string) => {
+    if (!this.verifyMessageFormat(unsafeMsg)) return // message is corrupt
+    if (!Crypto.verifyMessage(unsafeMsg, senderID)) return // message is not authentic
 
-    console.log('socket message was valid and of type ' + message.type)
+    const message = unsafeMsg.message
+    console.log('received valid socket message of type ' + message.type)
     switch (message.type) {
       case SocketMessageType.ANSWER:
-        if (!this.isInitiator) return
-        // @ts-ignore
+        if (!this.currentConfig.isInitiator) return
         this.connection.setRemoteDescription(message.payload)
         break
       case SocketMessageType.CANDIDATE:
-        // @ts-ignore
         this.connection.addIceCandidate(message.payload)
         break
       case SocketMessageType.OFFER:
-        if (this.isInitiator) return
-        // @ts-ignore
+        if (this.currentConfig.isInitiator) return
         this.connection.setRemoteDescription(message.payload)
           .then(() => this.connection.createAnswer())
           .then(desc => this.connection.setLocalDescription(desc))
@@ -175,11 +230,20 @@ export default class RTCManager {
     }
   }
 
-  private emitSignedMessage (message: SocketMessage) {
-    this.socket.emit('message', message)
+  private sendInitialContactInfo = () => { // MUST be a lambda—`this` is bound incorrectly if it's not
+    this.channel.send(JSON.stringify(this.currentConfig.selfContactInfo))
   }
 
-  private verifyMessageFormat = (message: any): message is SocketMessage => {
-    return 'type' in message && 'payload' in message
+  private async emitSignedMessage (message: SocketMessage) {
+    const signature = new Uint8Array(await Crypto.signMessage(JSON.stringify(message)))
+    const signedMessage: SignedMessage = {
+      message,
+      signature
+    }
+    this.socket.emit('message', signedMessage)
+  }
+
+  private verifyMessageFormat (message: any): message is SignedMessage {
+    return 'signature' in message && 'message' in message && 'type' in message['message'] && 'payload' in message['message']
   }
 }

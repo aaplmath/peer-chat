@@ -12,11 +12,13 @@ import {
 import { User } from '../../types/User'
 import AdditionalInfoForm from '../AdditionalInfoForm'
 import ContactRemovalModal from './ContactRemovalModal'
+import DB from '../../utils/db'
 
 type ProfileModalProps = {
   user: User,
   isOwnProfile: boolean,
-  updateHandler: (fieldName: string, value: string) => void
+  updateHandler: (fieldName: string, value: string) => void,
+  profileDeletionHandler?: () => void
 }
 
 type ProfileModalState = {
@@ -39,6 +41,17 @@ export default class ProfileModal extends React.PureComponent<ProfileModalProps,
     this.setState(state => ({ advancedShown: !state.advancedShown }))
   }
 
+  deleteAccount = () => {
+    DB.Instance.destroy().then(() => {
+      if (this.props.profileDeletionHandler) {
+        this.props.profileDeletionHandler()
+      } else {
+        // Something has gone horribly wrong, but we don't want to leave the user in an undefined state—bail and reload
+        window.location.reload()
+      }
+    })
+  }
+
   render () {
     return (
       <Modal size='small' trigger={<Dropdown.Item>{this.props.isOwnProfile ? 'My Profile' : 'View Details'}</Dropdown.Item>} closeIcon>
@@ -55,14 +68,13 @@ export default class ProfileModal extends React.PureComponent<ProfileModalProps,
               <Accordion.Title active={this.state.advancedShown} onClick={this.toggleAdvanced}>
                 <Icon name='dropdown' />Show advanced options</Accordion.Title>
               <Accordion.Content active={this.state.advancedShown}>
-                <Header as='h4'>Reset PeerChat ID</Header>
+                <Header as='h4'>Delete PeerChat Account</Header>
                 <Message color='red'>
-                  <strong>WARNING</strong>: Resetting your PeerChat ID will prevent any of your existing contacts from contacting you
-                    until you send them your new ID. Any future chat messages you send to contacts will appear to come from a different sender.
-                    {' '}<strong>This action is permanent and cannot be undone.</strong> Do not reset your PeerChat ID unless you fully understand
-                    the consequences of doing so.
+                  <strong>WARNING</strong>: Deleting your PeerChat account will delete all of your contacts, message history, and profile information
+                    and will permanently destroy your PeerChat ID.
+                    {' '}<strong>This action is permanent and cannot be undone.</strong>
                 </Message>
-                <Button color='red'>Reset PeerChat ID</Button>
+                <Button color='red' onClick={this.deleteAccount}>Delete PeerChat Account</Button>
               </Accordion.Content>
             </Accordion>
           }

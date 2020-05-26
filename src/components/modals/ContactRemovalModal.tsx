@@ -1,6 +1,7 @@
 import React from 'react'
 import { Button, Message, Modal } from 'semantic-ui-react'
 import { User, UserUtils } from '../../types/User'
+import DB from '../../utils/db'
 
 type ContactRemovalModalProps = { contact: User }
 type ContactRemovalModalState = { open: boolean }
@@ -10,6 +11,12 @@ export default class ContactRemovalModal extends React.PureComponent<ContactRemo
 
   handleOpen = () => { this.setState({ open: true }) }
   handleClose = () => { this.setState({ open: false }) }
+
+  handleRemove = () => {
+    DB.Instance.removeContact(this.props.contact.id).then(() => {
+      window.location.reload()
+    })
+  }
 
   render () {
     return (
@@ -25,7 +32,7 @@ export default class ContactRemovalModal extends React.PureComponent<ContactRemo
         </Modal.Content>
         <Modal.Actions>
           <Button content='Cancel' onClick={this.handleClose} />
-          <Button color='red' content='Remove' />
+          <Button color='red' content='Remove' onClick={this.handleRemove} />
         </Modal.Actions>
       </Modal>
     )
