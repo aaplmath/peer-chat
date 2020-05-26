@@ -1,0 +1,22 @@
+/* Loader-on-modal glitch fix */
+.ui.dimmer .ui.workaround.loader:before {
+    border-color: rgba(0,0,0,.1);
+}
+
+.ui.dimmer .ui.workaround.loader:after {
+    border-color: #767676 transparent transparent;
+}
+
+.ui.dimmer .ui.workaround.loader {
+    color: rgba(0,0,0,.87);
+}
+
+/* Reduce contact list header spacing */
+.ui.grid.contact-list-header .row:not(:last-child) {
+    padding-bottom: 0rem;
+}
+
+/* Ensure PeerChat IDs don't overflow their text containers */
+.peerchat-id {
+    overflow-wrap: break-word;
+}
