@@ -62,12 +62,33 @@ export default class DB {
     })
   }
 
+  /**
+   * Fetches all chat messages sent to or from the specified sender.
+   * @param senderID the ID of the contact whose messages to fetch.
+   */
   public async getChatMessages (senderID: string) {
     const messages = (await this.getMessagesForContact(senderID)).docs as ChatMessage[]
     // It would be lovely to use PouchDB's built-in sort—unfortunately, it's a total mess
     return messages.sort((a, b) => a.timestamp > b.timestamp ? 1 : -1)
   }
 
+  /**
+   * Returns whether a contact with the specified ID exists in the DB.
+   * @param contactID the ID of the contact to look up.
+   */
+  public async contactExists (contactID: string) {
+    // Using error handling as control flow is awful, but this is what PouchDB makes us do…
+    try {
+      await this.db.get(contactID)
+      return true
+    } catch (e) {
+      return false
+    }
+  }
+
+  /**
+   * Fetches an array of all contacts from the database.
+   */
   public async getContacts () {
     const res = await this.db.find({
       selector: {
@@ -118,8 +139,7 @@ export default class DB {
     this.db.put(doc)
   }
 
-  // TODO: Can we store keys in this "wrapped" format? This gist suggests we can: https://gist.github.com/saulshanabrook/b74984677bccd08b028b30d9968623f5
-  // Not in Firefox! Or Safari! But Chrome seems okay, so let's say it works…
+  // Storing "wrapped" keypairs fails in both Firefox and Safari. So this is a Chrome-only app for the time being…
   /**
    * Writes a new keypair to the database and updates the ID of the self object. WARNING: This deletes the old keypair and self.
    * @param keypair the keypair to write.
@@ -204,6 +224,9 @@ export default class DB {
     return this.db.bulkDocs(messageDocs.map(obj => ({ ...obj, _deleted: true })))
   }
 
+  /**
+   * Destroys the database and everything in it.
+   */
   public async destroy () {
     return this.db.destroy()
   }

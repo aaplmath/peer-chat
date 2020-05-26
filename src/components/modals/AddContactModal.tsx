@@ -12,7 +12,7 @@ type AddContactModalProps = {
 
 type AddContactModalState = {
   contactID: string | undefined,
-  activeStep: 1 | 2 | 3 | 'error',
+  activeStep: 1 | 2 | 3 | 'error' | 'exists',
   modalOpen: boolean,
   addedUser: User | undefined
 }
@@ -39,15 +39,23 @@ export default class AddContactModal extends React.PureComponent<AddContactModal
   }
 
   handleIDInput = (contactID) => {
-    this.setState({ contactID, activeStep: 2 })
-    RTCManager.Instance.requestConnection(this.props.self, contactID, true).then((userInfo: User) => {
-      if (userInfo === undefined) {
-        this.setState({ activeStep: 'error' })
+    DB.Instance.contactExists(contactID).then(exists => {
+      if (exists) {
+        // Contact already exists
+        this.setState({ activeStep: 'exists' })
       } else {
-        this.setState({ activeStep: 3, addedUser: userInfo })
+        // Contact is good; continue…
+        this.setState({ contactID, activeStep: 2 })
+        RTCManager.Instance.requestConnection(this.props.self, contactID, true).then((userInfo: User) => {
+          if (userInfo === undefined) {
+            this.setState({ activeStep: 'error' })
+          } else {
+            this.setState({ activeStep: 3, addedUser: userInfo })
+          }
+        }, () => {
+          this.setState({ activeStep: 'error' })
+        })
       }
-    }, () => {
-      this.setState({ activeStep: 'error' })
     })
   }
 
@@ -75,6 +83,7 @@ export default class AddContactModal extends React.PureComponent<AddContactModal
         {step === 1 ? <InputIDPage initialID={this.state.contactID} handler={this.handleIDInput} />
           : step === 2 ? <ConnectingPage />
           : step === 3 ? <CustomizeInfoPage user={this.state.addedUser} submitHandler={this.handleCompletion} />
+          : step === 'exists' ? <ContactExistsPage cancelHandler={this.handleClose} />
           : <ErrorPage cancelHandler={this.handleClose} retryHandler={this.handleReset} />}
       </Modal>
     )
@@ -89,7 +98,7 @@ class InputIDPage extends React.PureComponent<InputIDPageProps, InputIDPageState
     this.setState({ input: value })
   }
 
-  handleClick = (event, { name }) => {
+  handleClick = () => {
     this.props.handler(this.state.input)
   }
 
@@ -168,6 +177,22 @@ class ErrorPage extends React.PureComponent<ErrorPageProps> {
         <Modal.Actions>
           <Button onClick={cancelHandler}>Cancel</Button>
           <Button onClick={retryHandler}>Retry</Button>
+        </Modal.Actions>
+      </>
+    )
+  }
+}
+
+type ConactExistsPageProps = { cancelHandler: () => void }
+class ContactExistsPage extends React.PureComponent<ConactExistsPageProps> {
+  render () {
+    return (
+      <>
+        <Modal.Content>
+          <Message warning>A contact with that ID already exists in your contacts. To connect, select their name in the contacts list and click "Connect."</Message>
+        </Modal.Content>
+        <Modal.Actions>
+          <Button onClick={this.props.cancelHandler}>Close</Button>
         </Modal.Actions>
       </>
     )
