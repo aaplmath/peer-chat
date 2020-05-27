@@ -22,6 +22,7 @@ export class UserUtils {
    * @param user the user whose name to generate.
    */
   public static fullName (user: User): string {
+    if (!user) return ''
     const ID_SLICE_LENGTH = 4
     if (user.firstName === null && user.lastName === null) {
       return `(${user.id.slice(0, ID_SLICE_LENGTH)}…${user.id.slice(user.id.length - ID_SLICE_LENGTH)})`
@@ -38,6 +39,6 @@ export class UserUtils {
    * @param user the user whose name to generate.
    */
   public static fullNameWithLeadingAvatar (user: User): string {
-    return `${user.avatar ? user.avatar + ' ' : ''}${UserUtils.fullName(user)}`
+    return `${user && user.avatar ? user.avatar + ' ' : ''}${UserUtils.fullName(user)}`
   }
 }

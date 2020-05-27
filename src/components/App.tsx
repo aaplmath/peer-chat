@@ -7,8 +7,9 @@ import { User } from '../types/User'
 import FirstVisitModal from './modals/FirstVisitModal'
 import DB from '../utils/db'
 import Crypto from '../utils/Crypto'
-import AccountDeletedOverlay from './AccountDeletedOverlay'
+import ProfileDeletedOverlay from './overlays/ProfileDeletedOverlay'
 import '../styles/defaults.css'
+import PasswordOverlay from './overlays/PasswordOverlay'
 require('semantic-ui-css/semantic.min.css')
 
 type AppState = {
@@ -16,11 +17,11 @@ type AppState = {
   self: User,
   contacts: User[],
   needsInitialization: boolean,
-  accountDeleted: boolean
+  profileDeleted: boolean
 }
 
 export default class App extends React.PureComponent<{}, AppState> {
-  readonly state = { selectedContact: undefined, self: undefined, contacts: [], needsInitialization: false, accountDeleted: false }
+  readonly state = { selectedContact: undefined, self: undefined, contacts: [], needsInitialization: false, profileDeleted: false }
 
   // Called when contact selected in sidebar
   contactSelectHandler = selectedContact => {
@@ -70,8 +71,8 @@ export default class App extends React.PureComponent<{}, AppState> {
     }
   }
 
-  handleAccountDeletion = () => {
-    this.setState({ accountDeleted: true })
+  handleProfileDeletion = () => {
+    this.setState({ profileDeleted: true })
   }
 
   componentDidMount () {
@@ -89,12 +90,12 @@ export default class App extends React.PureComponent<{}, AppState> {
   }
 
   render () {
-    const { self, contacts, selectedContact, needsInitialization, accountDeleted } = this.state
-    return !accountDeleted ? (
+    const { self, contacts, selectedContact, needsInitialization, profileDeleted } = this.state
+    return !profileDeleted ? (
       <>
+        {/*<PasswordOverlay />*/}
         <FirstVisitModal open={needsInitialization} selfID={self?.id} callback={this.handleInitialization} />
-        {/* Wait to render top menu until we have a self to avoid pointless headache with derived state */}
-        {self && <TopMenu userInfo={self} updateHandler={this.handleSelfFieldUpdate} profileDeletionHandler={this.handleAccountDeletion} />}
+        <TopMenu userInfo={self} updateHandler={this.handleSelfFieldUpdate} profileDeletionHandler={this.handleProfileDeletion} />
         <Container>
           <Grid>
             <Grid.Column width={4}>
@@ -106,6 +107,6 @@ export default class App extends React.PureComponent<{}, AppState> {
           </Grid>
         </Container>
       </>
-    ) : ( <AccountDeletedOverlay /> )
+    ) : (<ProfileDeletedOverlay />)
   }
 }

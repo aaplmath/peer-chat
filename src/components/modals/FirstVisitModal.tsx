@@ -1,6 +1,7 @@
 import React from 'react'
-import { Button, Divider, Header, Icon, Modal } from 'semantic-ui-react'
-import AdditionalInfoForm from '../AdditionalInfoForm'
+import { Button, Divider, Form, Grid, Header, Icon, Modal } from 'semantic-ui-react'
+import AdditionalInfoForm from '../forms/AdditionalInfoForm'
+import PasswordEntryForm from '../forms/PasswordEntryForm'
 
 type FirstVisitModalProps = {
   open: boolean,
@@ -36,7 +37,7 @@ export default class FirstVisitModal extends React.PureComponent<FirstVisitModal
     this.setState({ open: false })
   }
 
-  handleInput = (name: Exclude<keyof FirstVisitModalState, 'open'>, value: string) => {
+  handleProfileInput = (name: Exclude<keyof FirstVisitModalState, 'open'>, value: string) => {
     // @ts-ignore
     this.setState({ [name]: value })
   }
@@ -54,13 +55,19 @@ export default class FirstVisitModal extends React.PureComponent<FirstVisitModal
             You can access it at any time from your profile.</p>
           <Divider />
           <p>Your PeerChat ID: <strong className='peerchat-id'>{this.props.selfID || 'Loading…'}</strong></p>
+          <Divider />
+          <Header as='h3'>Secure Your Profile</Header>
+          <p>Please enter and verify a password below. This password will be used to encrypt all of your PeerChat data.
+            {' '}<strong>Please note that passwords cannot be recovered if lost.</strong></p>
+          <PasswordEntryForm />
+          <Divider />
           {this.props.selfID && (
             <>
               <Divider />
               <p>Below, you may optionally choose to associate further information with your profile.
                 This information will be shared with anyone with whom you chat.
                 You may change, add, or remove it at any time from your profile.</p>
-              <AdditionalInfoForm userInfo={{ id: this.props.selfID }} handleInput={this.handleInput} />
+              <AdditionalInfoForm userInfo={{ id: this.props.selfID }} handleInput={this.handleProfileInput} />
             </>
           )}
         </Modal.Content>

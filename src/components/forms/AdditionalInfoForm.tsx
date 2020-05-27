@@ -1,6 +1,6 @@
 import React from 'react'
 import { Form, Grid } from 'semantic-ui-react'
-import { User } from '../types/User'
+import { User } from '../../types/User'
 
 type AdditionalInfoFormProps = {
   userInfo: Partial<User>,
@@ -26,7 +26,7 @@ export default class AdditionalInfoForm extends React.PureComponent<AdditionalIn
 
     return (
       <Form>
-        <Grid columns='equal'>
+        <Grid columns='equal' stackable>
           <Grid.Column>
             <Form.Input label='First name (optional)' name='firstName' onChange={this.handleInput} value={firstName || ''} />
           </Grid.Column>

@@ -10,7 +10,7 @@ import {
   Modal
 } from 'semantic-ui-react'
 import { User } from '../../types/User'
-import AdditionalInfoForm from '../AdditionalInfoForm'
+import AdditionalInfoForm from '../forms/AdditionalInfoForm'
 import ContactRemovalModal from './ContactRemovalModal'
 import DB from '../../utils/db'
 
@@ -41,7 +41,7 @@ export default class ProfileModal extends React.PureComponent<ProfileModalProps,
     this.setState(state => ({ advancedShown: !state.advancedShown }))
   }
 
-  deleteAccount = () => {
+  deleteProfile = () => {
     DB.Instance.destroy().then(() => {
       if (this.props.profileDeletionHandler) {
         this.props.profileDeletionHandler()
@@ -68,13 +68,13 @@ export default class ProfileModal extends React.PureComponent<ProfileModalProps,
               <Accordion.Title active={this.state.advancedShown} onClick={this.toggleAdvanced}>
                 <Icon name='dropdown' />Show advanced options</Accordion.Title>
               <Accordion.Content active={this.state.advancedShown}>
-                <Header as='h4'>Delete PeerChat Account</Header>
+                <Header as='h4'>Delete PeerChat Profile</Header>
                 <Message color='red'>
-                  <strong>WARNING</strong>: Deleting your PeerChat account will delete all of your contacts, message history, and profile information
+                  <strong>WARNING</strong>: Deleting your PeerChat profile will delete all of your contacts, message history, and profile information
                     and will permanently destroy your PeerChat ID.
-                    {' '}<strong>This action is permanent and cannot be undone.</strong>
+                    {' '}<strong>Clicking the button below will immediately, permanently, and irreversibly delete your profile.</strong>
                 </Message>
-                <Button color='red' onClick={this.deleteAccount}>Delete PeerChat Account</Button>
+                <Button color='red' onClick={this.deleteProfile}>Delete PeerChat Profile</Button>
               </Accordion.Content>
             </Accordion>
           }

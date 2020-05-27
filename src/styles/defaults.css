@@ -28,7 +28,7 @@
     max-width: 100% !important;
 }
 
-/* Make account deletion overlay opaque */
-.account-deletion-overlay {
-    background-color: rgba(0, 0, 0, 1);
+/* Make blocking overlays (database unlock, profile deletion) opaque */
+.opaque-overlay {
+    background-color: rgba(0, 0, 0, 1) !important;
 }

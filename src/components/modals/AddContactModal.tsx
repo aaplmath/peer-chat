@@ -1,6 +1,6 @@
 import React from 'react'
 import { Button, Modal, Input, Loader, Message, Icon } from 'semantic-ui-react'
-import AdditionalInfoForm from '../AdditionalInfoForm'
+import AdditionalInfoForm from '../forms/AdditionalInfoForm'
 import { User } from '../../types/User'
 import RTCManager from '../../utils/RTCManager'
 import DB from '../../utils/db'
