@@ -3,7 +3,7 @@ import {
   Accordion,
   Button,
   Divider,
-  Dropdown,
+  Dropdown, Form, Grid,
   Header,
   Icon,
   Message,
@@ -13,6 +13,7 @@ import { User } from '../../types/User'
 import AdditionalInfoForm from '../forms/AdditionalInfoForm'
 import ContactRemovalModal from './ContactRemovalModal'
 import DB from '../../utils/db'
+import ChangePasswordForm from '../forms/ChangePasswordForm'
 
 type ProfileModalProps = {
   user: User,
@@ -63,6 +64,13 @@ export default class ProfileModal extends React.PureComponent<ProfileModalProps,
           <Header as='h3'>Additional Information</Header>
           <AdditionalInfoForm userInfo={this.props.user} handleInput={this.handleInput} />
           <Divider />
+          {this.props.isOwnProfile &&
+            <>
+              <Header as='h3'>Change Password</Header>
+              <ChangePasswordForm />
+              <Divider />
+            </>}
+
           {!this.props.isOwnProfile ? <ContactRemovalModal contact={this.props.user} /> :
             <Accordion styled fluid>
               <Accordion.Title active={this.state.advancedShown} onClick={this.toggleAdvanced}>

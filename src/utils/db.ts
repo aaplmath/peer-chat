@@ -1,5 +1,6 @@
 import PouchDB from 'pouchdb'
 import PouchDBFind from 'pouchdb-find'
+import * as CryptoPouch from 'crypto-pouch'
 import { ChatMessage } from '../types/ChatMessage'
 import { User } from '../types/User'
 import Crypto from './Crypto'
@@ -8,7 +9,8 @@ enum DocType {
   CONTACT = 'C',
   MESSAGE = 'M',
   SELF = 'S',
-  KEYPAIR = 'K'
+  KEYPAIR = 'K',
+  DB_KEY = 'D'
 }
 
 type DocInfo = {
@@ -17,11 +19,28 @@ type DocInfo = {
   _rev?: string
 }
 
+type DBKParams = {
+  dbkEncryptedKey: string,
+  dbkSalt: string,
+  dbkNonce: string
+}
+
 type ChatMessageDoc = DocInfo & ChatMessage
 type UserDoc = DocInfo & User
 type KeypairDoc = DocInfo & CryptoKeyPair
+type DBKeyDoc = DocInfo & DBKParams
 
-type Docs = ChatMessageDoc | UserDoc | KeypairDoc
+type Docs = ChatMessageDoc | UserDoc | KeypairDoc | DBKeyDoc
+
+function NamedError (name: string, message?: string) {
+  const error = new Error(message)
+  error.name = name
+  return error
+}
+
+export enum DBError {
+  NO_KEYDOC = 'NoKeydocError'
+}
 
 const cyrb53 = function (str, seed = 0) {
   let h1 = 0xdeadbeef ^ seed
@@ -52,6 +71,7 @@ export default class DB {
 
   private constructor () {
     PouchDB.plugin(PouchDBFind)
+    PouchDB.plugin(CryptoPouch)
     this.db = new PouchDB('peerchat-db', { auto_compaction: true })
     this.db.createIndex({
       index: {
@@ -60,6 +80,105 @@ export default class DB {
         name: 'msg-index'
       }
     })
+    // TODO: get crypto working - will need to not use user IDs as _ids once we do to avoid data leakage
+    // @ts-ignore
+    // this.db.get('_local/crypto').then(doc => {
+    //   // @ts-ignore
+    //   console.log(doc.digest)
+    // })
+    // // @ts-ignore
+    // this.db.removeCrypto()
+  }
+
+  /**
+   * Attempts to decrypt the database using the specified password.
+   * @param password the password to use to decrypt.
+   * @return true if decryption succeeds or false if it does not.
+   */
+  public async decrypt (password: string) {
+    let keydoc: DBKeyDoc
+    try {
+      keydoc = await this.db.get('keydoc')
+    } catch {
+      console.log('no keydoc found')
+      throw NamedError(DBError.NO_KEYDOC)
+    }
+
+    try {
+      this.crypto(await Crypto.decryptDBKey(keydoc.dbkEncryptedKey, password, keydoc.dbkSalt, keydoc.dbkNonce))
+    } catch {
+      console.log('crypto failed')
+      return false
+    }
+    return this.canFetchDocs()
+  }
+
+  /**
+   * Attempts to set the database's encryption password.
+   * @param password the password to set.
+   * @return true if the password is successfully set or false if it is not (i.e., there is already a password).
+   */
+  public async setPassword (password: string) {
+    if (await this.encryptionKeyExists()) return false // should be using changePassword() instead
+
+    try {
+      const salt = Crypto.generateRandomBytes(16)
+      const nonce = Crypto.generateRandomBytes(12)
+      const key = await Crypto.generateDBKey()
+
+      const encryptedKey = await Crypto.encryptDBKey(key, password, salt, nonce)
+      const keyDoc: DBKeyDoc = {
+        _id: 'keydoc',
+        type: DocType.DB_KEY,
+        dbkEncryptedKey: encryptedKey,
+        dbkSalt: salt,
+        dbkNonce: nonce
+      }
+      await this.db.put(keyDoc)
+
+      // Don't sign the DB until we're confident that everything worked out
+      this.crypto(key)
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  public async changePassword (newPassword: string, oldPassword: string) {
+    try {
+      const existingKeyDoc: DBKeyDoc = await this.db.get('keydoc')
+      const { dbkEncryptedKey, dbkSalt, dbkNonce } = existingKeyDoc
+      const newEncryptedKey = await Crypto.encryptDBKey(
+        await Crypto.decryptDBKey(dbkEncryptedKey, oldPassword, dbkSalt, dbkNonce),
+        newPassword,
+        dbkSalt,
+        dbkNonce
+      )
+      const newDoc = {
+        ...existingKeyDoc,
+        _id: 'keydoc',
+        _rev: existingKeyDoc._rev,
+        type: DocType.DB_KEY,
+        dbkEncryptedKey: newEncryptedKey
+      }
+      await this.db.put(newDoc)
+      return true
+    } catch (e) {
+      console.error(`Password change failure of type ${e.name} with message ${e.message}`)
+      return false
+    }
+  }
+
+  /**
+   * Returns true if an encryption key document is found and false if none has been set up.
+   */
+  public async encryptionKeyExists () {
+    try {
+      await this.db.get('keydoc')
+      return true
+    } catch {
+      return false
+    }
   }
 
   /**
@@ -181,7 +300,9 @@ export default class DB {
     let oldSelf: { _rev?: string } = { _rev: undefined }
     try {
       oldSelf = await this.getRawSelf()
-    } catch {}
+    } catch {
+      console.error('Failed to get raw self')
+    }
     const doc = {
       ...self,
       _id: 'self',
@@ -221,7 +342,7 @@ export default class DB {
     const doc = await this.db.get(contactID)
     await this.db.remove(doc)
     const messageDocs = (await this.getMessagesForContact(contactID)).docs
-    return this.db.bulkDocs(messageDocs.map(obj => ({ ...obj, _deleted: true })))
+    return this.db.bulkDocs(messageDocs.map(obj => ({ ...obj, _id: obj._id, _rev: obj._rev, _deleted: true })))
   }
 
   /**
@@ -246,5 +367,20 @@ export default class DB {
       // use_index: ['primary', 'msg-index'],
       // sort: [{ timestamp: 'asc' }] // We have to sort on everything—I swear, whoever designed PouchDB…
     })
+  }
+
+  private async canFetchDocs () {
+    try {
+      await this.db.get('self')
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  private crypto (password: string) {
+    const ignore: Array<keyof DBKParams> = ['dbkEncryptedKey', 'dbkSalt', 'dbkNonce']
+    // @ts-ignore - no types for crypto-pouch
+    this.db.crypto(password, { ignore })
   }
 }

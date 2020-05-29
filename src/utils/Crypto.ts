@@ -4,6 +4,8 @@
 import DB from './db'
 import { SignedMessage } from './RTCManager'
 
+type StringifiedBuffer = string
+
 export default class Crypto {
   private static readonly ECDSA_KEYGEN_CONFIG: EcKeyGenParams = {
     name: 'ECDSA',
@@ -13,9 +15,19 @@ export default class Crypto {
     name: 'ECDSA',
     hash: 'SHA-256'
   }
+  private static readonly PBKDF2_CONFIG: Omit<Pbkdf2Params, 'salt'> = {
+    name: 'PBKDF2',
+    hash: 'SHA-256',
+    iterations: 100000
+  }
+  private static readonly AES_KEYGEN_PARAMS: AesKeyGenParams = {
+    name: 'AES-GCM',
+    length: 256
+  }
+  private static readonly encoder = new TextEncoder()
 
   static async generateKeypair (): Promise<CryptoKeyPair> {
-    return crypto.subtle.generateKey(this.ECDSA_KEYGEN_CONFIG, true, ['sign', 'verify'])
+    return crypto.subtle.generateKey(Crypto.ECDSA_KEYGEN_CONFIG, true, ['sign', 'verify'])
   }
 
   /**
@@ -28,19 +40,13 @@ export default class Crypto {
     // For some reason, the first element of pubData is ALWAYS 4. This is probably some sort of internal thing, but it means
     // user IDs are less seemingly unique. Therefore, we drop the 4 and will add it back later when we convert back to CryptoKey.
     const buffer = new Uint8Array(pubData, 1)
-    return buffer.reduce((acc, byte) => {
-      // Convert the buffer to a string by splitting each byte into 4-bit pieces, then base-16 encoding each
-      const low = byte & 0xf
-      const high = (byte >> 4) & 0xf
-      return acc + high.toString(16) + low.toString(16)
-    }, '')
+    return Crypto.bufToStr(buffer)
   }
 
-  static async signMessage<T extends string> (message: T) {
-    // See https://developers.google.com/web/updates/2012/06/How-to-convert-ArrayBuffer-to-and-from-String
-    const bufArr = Crypto.strToBuf(message)
+  static async signMessage<T extends string> (message: T): Promise<ArrayBuffer> {
+    const bufArr = Crypto.encoder.encode(message)
     const key = await DB.Instance.getPrivateKey()
-    return crypto.subtle.sign(this.ECDSA_SIGN_CONFIG, key, bufArr)
+    return crypto.subtle.sign(Crypto.ECDSA_SIGN_CONFIG, key, bufArr)
   }
 
   /**
@@ -49,26 +55,92 @@ export default class Crypto {
    * @param publicKey the public key corresponding to the one used to sign the message.
    * @return true if the signature is verified, and false if it is not.
    */
-  static async verifyMessage (message: SignedMessage, publicKey: string) {
-    // TODO: Fix the below
-    const exportedKey = Uint8Array.from(
-      [4].concat( // restore leading 4 that we removed when generating ID
-        publicKey.match(/.{1,2}/g) // split string into fragments corresponding to original bytes
-          .map(byteStr => ((parseInt(byteStr[0], 16) & 0xf) << 4)
-                            | (parseInt(byteStr[1], 16) & 0xf)) // get place values back where they should be
-      )
-    )
-    const key = await crypto.subtle.importKey('raw', exportedKey, this.ECDSA_KEYGEN_CONFIG, true, ['verify'])
-    const msgBuf = Crypto.strToBuf(JSON.stringify(message.message))
-    return crypto.subtle.verify(this.ECDSA_SIGN_CONFIG, key, Uint8Array.from(message.signature), msgBuf)
+  static async verifyMessage (message: SignedMessage, publicKey: StringifiedBuffer) {
+    const exportedKey = Crypto.strToBuf(publicKey, [4]) // restore leading 4 that was removed when generating ID
+    const key = await crypto.subtle.importKey('raw', exportedKey, Crypto.ECDSA_KEYGEN_CONFIG, true, ['verify'])
+    const msgBuf = Crypto.encoder.encode(JSON.stringify(message.message))
+    return crypto.subtle.verify(Crypto.ECDSA_SIGN_CONFIG, key, Uint8Array.from(message.signature), msgBuf)
   }
 
-  private static strToBuf<T extends string> (str: T): Uint16Array {
-    const buf = new ArrayBuffer(str.length * 2)
-    const bufArr = new Uint16Array(buf)
-    for (let i = 0; i < bufArr.length; ++i) {
-      bufArr[i] = str.charCodeAt(i)
+  /**
+   * Generates a random key to be used as the database encryption key.
+   */
+  static async generateDBKey () {
+    let arr = new Uint8Array(256)
+    crypto.getRandomValues(arr)
+    return Crypto.bufToStr(arr)
+  }
+
+  /**
+   * Generates random bytes for producing salts and initialization vectors.
+   */
+  static generateRandomBytes (length: number) {
+    let arr = new Uint8Array(length)
+    crypto.getRandomValues(arr)
+    return Crypto.bufToStr(arr)
+  }
+
+  /**
+   * Encrypts the database encryption key.
+   * @param key the database encryption key (from {@link generateDBKey()}) to encrypt.
+   * @param password the password with which to encrypt the key.
+   * @param salt the salt to be used in encrypting the key.
+   * @param nonce the initialization vector to be used in encrypting the key.
+   */
+  static async encryptDBKey (key: StringifiedBuffer, password: string, salt: string, nonce: string): Promise<string> {
+    const keySigningKey = await Crypto.deriveKeySigningKey(password, salt)
+    const aesGcmConfig: AesGcmParams = {
+      name: 'AES-GCM',
+      iv: Crypto.strToBuf(nonce)
     }
-    return bufArr
+    const keyBuffer = Crypto.strToBuf(key)
+    const cipherBuffer = await crypto.subtle.encrypt(aesGcmConfig, keySigningKey, keyBuffer)
+    return Crypto.bufToStr(new Uint8Array(cipherBuffer))
+  }
+
+  static async decryptDBKey (encryptedKey: string, password: string, salt: string, nonce: string): Promise<string | never> {
+    const keySigningKey = await Crypto.deriveKeySigningKey(password, salt)
+    const aesGcmConfig: AesGcmParams = {
+      name: 'AES-GCM',
+      iv: Crypto.strToBuf(nonce)
+    }
+    const encryptedKeyBuffer = Crypto.strToBuf(encryptedKey)
+    const cipherBuffer = await crypto.subtle.decrypt(aesGcmConfig, keySigningKey, encryptedKeyBuffer)
+    return Crypto.bufToStr(new Uint8Array(cipherBuffer))
+  }
+
+  private static async deriveKeySigningKey (password: string, salt: string): Promise<CryptoKey> {
+    const passwordBuffer = Crypto.encoder.encode(password)
+    const passwordKey = await crypto.subtle.importKey('raw', passwordBuffer, 'PBKDF2', false, ['deriveKey'])
+    const derivationConfig: Pbkdf2Params = { ...Crypto.PBKDF2_CONFIG, salt: Crypto.strToBuf(salt) }
+    return crypto.subtle.deriveKey(derivationConfig, passwordKey, Crypto.AES_KEYGEN_PARAMS, false, ['encrypt', 'decrypt'])
+  }
+
+  /**
+   * Converts a non-UTF-8 buffer to a base-16 string representation of the buffer.
+   *
+   * NOTE: if the buffer corresponds to actual encoded text, use {@link TextDecoder}.
+   * @param buffer the buffer to convert to a string representation.
+   */
+  private static bufToStr (buffer: Uint8Array): StringifiedBuffer {
+    return buffer.reduce((acc, byte) => {
+      // Convert the buffer to a string by splitting each byte into 4-bit pieces, then base-16 encoding each
+      const low = byte & 0xf
+      const high = (byte >> 4) & 0xf
+      return acc + high.toString(16) + low.toString(16)
+    }, '')
+  }
+
+  /**
+   * Converts a base-16 string representation of a byte array to a typed byte array.
+   *
+   * NOTE: if the string is actual text rather than a base-16 representation of non-UTF-8 buffer data, use {@link TextEncoder}.
+   * @param str the string to encode.
+   * @param prependElements any elements to prepend to the resulting buffer.
+   */
+  private static strToBuf (str: string, prependElements: number[] = []): Uint8Array {
+    return Uint8Array.from(prependElements.concat(str.match(/.{1,2}/g) // split string into fragments corresponding to original bytes
+      .map(byteStr => ((parseInt(byteStr[0], 16) & 0xf) << 4)
+        | (parseInt(byteStr[1], 16) & 0xf)))) // get place values back where they should be
   }
 }
