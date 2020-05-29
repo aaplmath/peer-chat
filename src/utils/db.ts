@@ -14,8 +14,8 @@ enum DocType {
 }
 
 type DocInfo = {
-  '_id': string,
-  'type': DocType,
+  _id?: string, // not required for post()
+  type: DocType,
   _rev?: string
 }
 
@@ -42,24 +42,6 @@ export enum DBError {
   NO_KEYDOC = 'NoKeydocError'
 }
 
-const cyrb53 = function (str, seed = 0) {
-  let h1 = 0xdeadbeef ^ seed
-  let h2 = 0x41c6ce57 ^ seed
-
-  // tslint:disable-next-line:one-variable-per-declaration
-  for (let i = 0, ch; i < str.length; i++) {
-    ch = str.charCodeAt(i)
-    h1 = Math.imul(h1 ^ ch, 2654435761)
-    h2 = Math.imul(h2 ^ ch, 1597334677)
-  }
-
-  // eslint-disable-next-line no-mixed-operators
-  h1 = Math.imul(h1 ^ h1 >>> 16, 2246822507) ^ Math.imul(h2 ^ h2 >>> 13, 3266489909)
-  // eslint-disable-next-line no-mixed-operators
-  h2 = Math.imul(h2 ^ h2 >>> 16, 2246822507) ^ Math.imul(h1 ^ h1 >>> 13, 3266489909)
-  return 4294967296 * (2097151 & h2) + (h1 >>> 0)
-}
-
 // TODO: ERROR HANDLING!
 export default class DB {
   private static _instance: DB
@@ -80,14 +62,6 @@ export default class DB {
         name: 'msg-index'
       }
     })
-    // TODO: get crypto working - will need to not use user IDs as _ids once we do to avoid data leakage
-    // @ts-ignore
-    // this.db.get('_local/crypto').then(doc => {
-    //   // @ts-ignore
-    //   console.log(doc.digest)
-    // })
-    // // @ts-ignore
-    // this.db.removeCrypto()
   }
 
   /**
@@ -196,13 +170,8 @@ export default class DB {
    * @param contactID the ID of the contact to look up.
    */
   public async contactExists (contactID: string) {
-    // Using error handling as control flow is awful, but this is what PouchDB makes us do…
-    try {
-      await this.db.get(contactID)
-      return true
-    } catch (e) {
-      return false
-    }
+    const match = await this.getContact(contactID)
+    return match !== undefined
   }
 
   /**
@@ -245,17 +214,15 @@ export default class DB {
   }
 
   /**
-   * Writes a chat message to the database. Primary key is an XOR of the hash of the timestamp and the sender ID.
+   * Writes a chat message to the database.
    * @param chatMessage the message to write to the database.
    */
   public addChatMessage (chatMessage: ChatMessage) {
-    const hash = cyrb53(chatMessage.timestamp.toString()) ^ cyrb53(chatMessage.senderID)
     const doc = {
       ...chatMessage,
-      '_id': hash.toString(16),
       'type': DocType.MESSAGE
     }
-    this.db.put(doc)
+    this.db.post(doc) // prefer a random ID so nothing about the chat message is leaked in the unencrypted ID field
   }
 
   // Storing "wrapped" keypairs fails in both Firefox and Safari. So this is a Chrome-only app for the time being…
@@ -319,19 +286,24 @@ export default class DB {
    * @param contact the new contact info to write or update.
    */
   public async putContact (contact: User) {
-    let existingContact = { _rev: undefined }
     try {
-      existingContact = await this.db.get(contact.id)
+      const existingContact = await this.getContact(contact.id)
+      const newDoc = {
+        ...contact,
+        _id: existingContact._id,
+        _rev: existingContact._rev,
+        type: DocType.CONTACT
+      }
+      this.db.put(newDoc)
     } catch {
       // We're adding a new contact; nothing to worry about
+      const newDoc = {
+        ...contact,
+        type: DocType.CONTACT
+      }
+      this.db.post(newDoc) // We *want* a random ID because we don't want to leak anything traceable to the contact in the unencrypted _id field
     }
-    const newDoc = {
-      ...contact,
-      _id: contact.id,
-      type: DocType.CONTACT,
-      _rev: existingContact._rev
-    }
-    this.db.put(newDoc)
+
   }
 
   /**
@@ -339,7 +311,7 @@ export default class DB {
    * @param contactID the ID of the contact to delete.
    */
   public async removeContact (contactID: string) {
-    const doc = await this.db.get(contactID)
+    const doc = await this.getContact(contactID)
     await this.db.remove(doc)
     const messageDocs = (await this.getMessagesForContact(contactID)).docs
     return this.db.bulkDocs(messageDocs.map(obj => ({ ...obj, _id: obj._id, _rev: obj._rev, _deleted: true })))
@@ -350,6 +322,14 @@ export default class DB {
    */
   public async destroy () {
     return this.db.destroy()
+  }
+
+  /**
+   * Fetches the contact entry with the specified ID.
+   * @param contactID the ID of the contact to fetch.
+   */
+  private async getContact (contactID: string) {
+    return (await this.db.find({ selector: { id: contactID } })).docs[0]
   }
 
   private getMessagesForContact (contactID: string) {
