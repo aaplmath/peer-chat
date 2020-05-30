@@ -7,9 +7,10 @@ import {
   Header,
   Icon,
   Message,
-  Modal
+  Modal,
+  Menu
 } from 'semantic-ui-react'
-import { User } from '../../types/User'
+import { User, UserUtils } from '../../types/User'
 import AdditionalInfoForm from '../forms/AdditionalInfoForm'
 import ContactRemovalModal from './ContactRemovalModal'
 import DB from '../../utils/db'
@@ -55,7 +56,9 @@ export default class ProfileModal extends React.PureComponent<ProfileModalProps,
 
   render () {
     return (
-      <Modal size='small' trigger={<Dropdown.Item>{this.props.isOwnProfile ? 'My Profile' : 'View Details'}</Dropdown.Item>} closeIcon>
+      <Modal size='small' trigger={
+        <Menu.Item>{UserUtils.fullNameWithLeadingAvatar(this.props.user)}</Menu.Item>
+      } closeIcon>
         <Modal.Header>{this.props.isOwnProfile ? 'My Profile' : 'Contact Details'}</Modal.Header>
         <Modal.Content>
           <Header as='h3'>PeerChat ID</Header>

@@ -15,16 +15,12 @@ export default class TopMenu extends React.PureComponent<TopMenuProps> {
       <Menu borderless>
         <Menu.Item header>PeerChat</Menu.Item>
         <Menu.Menu position='right'>
-          <Dropdown text={UserUtils.fullNameWithLeadingAvatar(this.props.userInfo)} pointing className='link item'>
-            <Dropdown.Menu>
-              {this.props.userInfo &&
-                <ProfileModal user={this.props.userInfo}
-                              isOwnProfile={true}
-                              updateHandler={this.props.updateHandler}
-                              profileDeletionHandler={this.props.profileDeletionHandler} />
-              }
-            </Dropdown.Menu>
-          </Dropdown>
+          {this.props.userInfo &&
+          <ProfileModal user={this.props.userInfo}
+                        isOwnProfile={true}
+                        updateHandler={this.props.updateHandler}
+                        profileDeletionHandler={this.props.profileDeletionHandler} />
+          }
         </Menu.Menu>
       </Menu>
     )

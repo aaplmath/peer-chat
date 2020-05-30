@@ -1,3 +1,6 @@
+import React from 'react'
+import { Emoji } from 'emoji-mart'
+
 export type User = {
   id: string
   firstName: string | null
@@ -38,7 +41,16 @@ export class UserUtils {
    * Returns the user's full name if either first or last name exists, or else the user's ID in parentheses, all preceded by the user's avatar if one exists.
    * @param user the user whose name to generate.
    */
-  public static fullNameWithLeadingAvatar (user: User): string {
-    return `${user && user.avatar ? user.avatar + ' ' : ''}${UserUtils.fullName(user)}`
+  public static fullNameWithLeadingAvatar (user: User): React.ReactFragment {
+    return (
+      <>
+        {(user && user.avatar) && <> {UserUtils.emojiAvatar(user)} {' '} </>}
+        {UserUtils.fullName(user)}
+      </>
+    )
+  }
+
+  public static emojiAvatar (user: User) {
+    return <Emoji emoji={user.avatar} size={24} />
   }
 }

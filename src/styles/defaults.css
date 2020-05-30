@@ -32,3 +32,39 @@
 .opaque-overlay {
     background-color: rgba(0, 0, 0, 1) !important;
 }
+
+/* Shrink massive emoji-mart preview bar and label & move skin tone setter */
+.emoji-mart-preview {
+    height: 40px;
+}
+.emoji-mart-preview-emoji, .emoji-mart-preview-data {
+    display: none;
+}
+.emoji-mart-preview-skins {
+    left: 120px;
+    right: unset;
+}
+.emoji-mart-preview::before {
+    content: 'Default skin tone';
+    font-size: 12px;
+    position: absolute;
+    left: 10px;
+    bottom: 15px;
+    width: 100px;
+    text-align: right;
+}
+
+/* Make emoji buttons display inline */
+.inline-button {
+    display: inline;
+    margin-right: 0.5em !important;
+    margin-left: 0.5em !important;
+}
+
+/**/
+.emoji-segment {
+    display: inline;
+}
+.emoji-segment span {
+    vertical-align: middle;
+}

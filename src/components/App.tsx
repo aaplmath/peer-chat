@@ -105,7 +105,8 @@ export default class App extends React.PureComponent<{}, AppState> {
     const selfPromise = DB.Instance.getSelf()
     const keyExistsPromise = DB.Instance.encryptionKeyExists()
     Promise.all([selfPromise, keyExistsPromise]).then(([self, dbKeyExists]) => {
-      if (self === undefined || self.id === undefined) {
+      console.log(self)
+      if (self === undefined) {
         this.setState({ needsInitialization: true })
         this.generateKeypair()
       } else if (!dbKeyExists) {

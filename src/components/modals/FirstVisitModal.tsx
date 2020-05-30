@@ -90,7 +90,6 @@ export default class FirstVisitModal extends React.PureComponent<FirstVisitModal
             </Grid>
           </Form>
 
-          <Divider />
           {this.props.selfID && (
             <>
               <Divider />

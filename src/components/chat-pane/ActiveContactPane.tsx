@@ -1,5 +1,5 @@
 import React from 'react'
-import { Comment, Divider, Dropdown, Form, Grid, Header, Label, Message } from 'semantic-ui-react'
+import { Comment, Divider, Dropdown, Form, Grid, Header, Label, Menu, Message } from 'semantic-ui-react'
 import { User, UserUtils } from '../../types/User'
 import { ChatMessage, SenderType } from '../../types/ChatMessage'
 import ContactInvitationModal from '../modals/ContactInvitationModal'
@@ -98,19 +98,17 @@ export default class ActiveContactPane extends React.PureComponent<ActiveContact
     const { contact, self } = this.props
     const { messages, input } = this.state
     const connected = RTCManager.Instance.currentConfig.connected && RTCManager.Instance.currentConfig.contactID === contact.id
-    const meName = self.avatar ? `${self.avatar} Me` : 'Me'
+    const meName = self.avatar ? <> {UserUtils.emojiAvatar(self)} {' '} Me </> : 'Me'
     return (
       <>
         <Grid>
           <Grid.Row verticalAlign='middle'>
             <Grid.Column width={8}>
-              <Dropdown text={UserUtils.fullNameWithLeadingAvatar(contact)} pointing='top'>
-                <Dropdown.Menu>
-                  <ProfileModal user={contact}
-                                isOwnProfile={false}
-                                updateHandler={this.handleContactUpdate} />
-                </Dropdown.Menu>
-              </Dropdown>
+              <Menu secondary>
+                <ProfileModal user={contact}
+                              isOwnProfile={false}
+                              updateHandler={this.handleContactUpdate} />
+              </Menu>
             </Grid.Column>
             <Grid.Column floated='right' textAlign='right' width={8}>
               {connected
