@@ -138,7 +138,7 @@ export default class DB {
       await this.db.put(newDoc)
       return true
     } catch (e) {
-      console.error(`Password change failure of type ${e.name} with message ${e.message}`)
+      console.log(`Password change failure of type ${e.name} with message ${e.message}`)
       return false
     }
   }

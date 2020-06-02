@@ -1,7 +1,7 @@
 import React from 'react'
-import { Dropdown, Menu } from 'semantic-ui-react'
+import { Menu } from 'semantic-ui-react'
 import ProfileModal from './modals/ProfileModal'
-import { User, UserUtils } from '../types/User'
+import { User } from '../types/User'
 
 type TopMenuProps = {
   userInfo: User | undefined,

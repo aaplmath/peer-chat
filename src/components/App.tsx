@@ -5,7 +5,7 @@ import TopMenu from './TopMenu'
 import ChatPane from './chat-pane/ChatPane'
 import { User } from '../types/User'
 import FirstVisitModal from './modals/FirstVisitModal'
-import DB, { DBError } from '../utils/db'
+import DB from '../utils/db'
 import Crypto from '../utils/Crypto'
 import ProfileDeletedOverlay from './overlays/ProfileDeletedOverlay'
 import '../styles/defaults.css'
@@ -72,7 +72,6 @@ export default class App extends React.PureComponent<{}, AppState> {
   handleSelfFieldUpdate = (fieldName, value) => {
     const newSelf = { ...this.state.self, [fieldName]: value }
     this.setState({ self: newSelf })
-    console.log(newSelf)
     DB.Instance.updateSelf(newSelf)
   }
 
@@ -105,7 +104,6 @@ export default class App extends React.PureComponent<{}, AppState> {
     const selfPromise = DB.Instance.getSelf()
     const keyExistsPromise = DB.Instance.encryptionKeyExists()
     Promise.all([selfPromise, keyExistsPromise]).then(([self, dbKeyExists]) => {
-      console.log(self)
       if (self === undefined) {
         this.setState({ needsInitialization: true })
         this.generateKeypair()

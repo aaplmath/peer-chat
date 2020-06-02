@@ -41,29 +41,24 @@
     display: none;
 }
 .emoji-mart-preview-skins {
-    left: 120px;
+    left: 75px;
     right: unset;
 }
 .emoji-mart-preview::before {
-    content: 'Default skin tone';
+    content: 'Skin tone';
     font-size: 12px;
     position: absolute;
-    left: 10px;
+    left: -35px;
     bottom: 15px;
     width: 100px;
     text-align: right;
 }
 
-/* Make emoji buttons display inline */
+/* Make emoji buttons display inline and emoji appear vertically aligned with buttons */
 .inline-button {
     display: inline;
     margin-right: 0.5em !important;
     margin-left: 0.5em !important;
-}
-
-/**/
-.emoji-segment {
-    display: inline;
 }
 .emoji-segment span {
     vertical-align: middle;

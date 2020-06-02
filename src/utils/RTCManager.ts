@@ -106,7 +106,6 @@ export default class RTCManager {
    */
   public sendMessage = (message: ChatMessage) => {
     if (this.currentConfig.connected && this.channel.readyState === 'open') {
-      // TODO: sign this
       this.channel.send(JSON.stringify(message))
     }
   }
@@ -171,6 +170,7 @@ export default class RTCManager {
       case 'closed':
         this.onconnectionchange(false)
         this.currentConfig.connected = false
+        break
       default:
         break
     }
