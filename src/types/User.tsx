@@ -1,5 +1,6 @@
 import React from 'react'
 import { Emoji } from 'emoji-mart'
+import { Container } from 'semantic-ui-react'
 
 export type User = {
   id: string
@@ -43,10 +44,10 @@ export class UserUtils {
    */
   public static fullNameWithLeadingAvatar (user: User): React.ReactFragment {
     return (
-      <>
+      <div className='contact-row'>
         {(user && user.avatar) && <> {UserUtils.emojiAvatar(user)} {' '} </>}
-        {UserUtils.fullName(user)}
-      </>
+        <span style={{ marginLeft: '5px' }}>{UserUtils.fullName(user)}</span>
+      </div>
     )
   }
 

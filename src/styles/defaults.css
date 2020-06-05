@@ -63,3 +63,12 @@
 .emoji-segment span {
     vertical-align: middle;
 }
+
+/* Vertically center-align emoji and contact names */
+.contact-row {
+    display: flex;
+    align-items: center;
+}
+.contact-row .emoji-mart-emoji {
+    font-size: unset;
+}
