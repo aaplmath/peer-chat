@@ -10,6 +10,7 @@ import Crypto from '../utils/Crypto'
 import ProfileDeletedOverlay from './overlays/ProfileDeletedOverlay'
 import '../styles/defaults.css'
 import PasswordOverlay from './overlays/PasswordOverlay'
+import UnsupportedBrowserOverlay from './overlays/UnsupportedBrowserOverlay'
 require('semantic-ui-css/semantic.min.css')
 
 type AppState = {
@@ -122,6 +123,10 @@ export default class App extends React.PureComponent<{}, AppState> {
     } else if (!dbUnlocked && !needsInitialization) {
       return <PasswordOverlay onDBUnlocked={this.handleDBUnlocked} />
     }
+
+    // TODO: fix the app so it works in other browsers
+    // @ts-ignore
+    if (!window.chrome || !window.chrome.runtime) return <UnsupportedBrowserOverlay />
 
     return (
       <>
