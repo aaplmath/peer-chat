@@ -44,10 +44,10 @@ export class UserUtils {
    */
   public static fullNameWithLeadingAvatar (user: User): React.ReactFragment {
     return (
-      <div className='contact-row'>
+      <span className='contact-row'>
         {(user && user.avatar) && <> {UserUtils.emojiAvatar(user)} {' '} </>}
-        <span style={{ marginLeft: '5px' }}>{UserUtils.fullName(user)}</span>
-      </div>
+        <span className='contact-name'>{UserUtils.fullName(user)}</span>
+      </span>
     )
   }
 

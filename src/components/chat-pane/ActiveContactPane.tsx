@@ -123,7 +123,7 @@ export default class ActiveContactPane extends React.PureComponent<ActiveContact
           {messages.length === 0 ?
             <Header as='h3' color='grey'>No messages yet</Header>
             : messages.map((message, idx) => (
-            <Comment key={idx}>
+            <Comment key={idx} className='chat-item'>
               <Comment.Content>
                 <Comment.Author as='span'>{message.senderType === SenderType.ME ? meName : UserUtils.fullNameWithLeadingAvatar(contact)}</Comment.Author>
                 <Comment.Metadata>{new Date(message.timestamp).toLocaleString()}</Comment.Metadata>

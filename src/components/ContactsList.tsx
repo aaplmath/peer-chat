@@ -142,7 +142,7 @@ export default class ContactsList extends React.PureComponent<ContactsListProps,
           </Grid.Row>
         </Grid>
 
-        <List selection relaxed>
+        <List selection relaxed className='contact-list'>
           {this.sortedContacts().map((contact, idx) => (
               <List.Item name={contact.id} active={this.state.activeID === contact.id} key={idx} onClick={this.handleContactClick}>
                 <List.Content>

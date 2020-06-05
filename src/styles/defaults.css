@@ -24,6 +24,7 @@
 /* Ensure chat window scrolls so that rest of UI—including chat bar—remains visible */
 .chat-list {
     overflow-y: auto;
+    padding-top: 5px; /* prevents top emoji from being cut off */
     max-height: 60vh;
     max-width: 100% !important;
 }
@@ -64,11 +65,19 @@
     vertical-align: middle;
 }
 
-/* Vertically center-align emoji and contact names */
+/* Vertically and horizontally center-align emoji and contact names and avoid emoji causing chat metadata overflow */
 .contact-row {
-    display: flex;
+    display: inline-flex;
     align-items: center;
 }
 .contact-row .emoji-mart-emoji {
     font-size: unset;
+    position: absolute;
+    overflow: visible;
+}
+.contact-row .contact-name, .contact-list .contact-row .contact-name:first-child {
+    margin-left: 30px;
+}
+.contact-row .contact-name:first-child {
+    margin-left: 0; /* Ensure all names in the contact list are aligned */
 }
