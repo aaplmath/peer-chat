@@ -1,6 +1,5 @@
 import React from 'react'
 import { Emoji } from 'emoji-mart'
-import { Container } from 'semantic-ui-react'
 
 export type User = {
   id: string

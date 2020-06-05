@@ -65,7 +65,7 @@ export default class ActiveContactPane extends React.PureComponent<ActiveContact
   }
 
   handleIncomingMessage = (message: ChatMessage) => {
-    this.persistChatMessage(message)
+    this.persistChatMessage(message, message.senderID === this.state.currentID)
   }
 
   handleInput = (event, { value }) => {
@@ -85,12 +85,15 @@ export default class ActiveContactPane extends React.PureComponent<ActiveContact
       content: input
     }
     RTCManager.Instance.sendMessage(message)
-    this.persistChatMessage(message)
+    this.persistChatMessage(message, true)
     this.setState({ input: '' })
   }
 
-  private persistChatMessage = (message: ChatMessage) => {
-    this.setState(({ messages }) => ({ messages: messages.concat(message) }))
+  private persistChatMessage = (message: ChatMessage, showInFeed: boolean) => {
+    // TODO: add some sort of notification to alert the user that they've received a message for a non-active contact
+    if (showInFeed) {
+      this.setState(({ messages }) => ({ messages: messages.concat(message) }))
+    }
     DB.Instance.addChatMessage(message)
   }
 

@@ -43,6 +43,7 @@ export default class RTCManager {
 
   private pendingPromise = { resolve: undefined, reject: undefined }
 
+  // Since these are indirectly called by other handlers, we don't need to worry about de-registering on reassignment
   public onchatmessage = (msg: ChatMessage) => {}
   public onconnectionchange = (connected: boolean) => {}
 
@@ -119,13 +120,12 @@ export default class RTCManager {
     }
     try {
       this.connection = new RTCPeerConnection(configuration)
+      this.connection.addEventListener('icecandidate', this.onIceCandidate)
+      this.connection.addEventListener('datachannel', this.onDataChannel)
+      this.connection.addEventListener('connectionstatechange', this.onConnectionStateChange)
     } catch (err) {
       console.error(`Failed to construct RTCPeerConnection with error: ${err.name}\n\n${err.message}`)
     }
-
-    this.connection.addEventListener('icecandidate', this.onIceCandidate)
-    this.connection.addEventListener('datachannel', this.onDataChannel)
-    this.connection.addEventListener('connectionstatechange', this.onConnectionStateChange)
   }
 
   private onDataChannel = (event: any | { channel: RTCDataChannel }) => {
