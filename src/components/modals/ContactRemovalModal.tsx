@@ -14,6 +14,7 @@ export default class ContactRemovalModal extends React.PureComponent<ContactRemo
 
   handleRemove = () => {
     DB.Instance.removeContact(this.props.contact.id).then(() => {
+      // TODO: actually clean up the state
       window.location.reload()
     })
   }

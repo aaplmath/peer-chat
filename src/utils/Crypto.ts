@@ -81,11 +81,11 @@ export default class Crypto {
   }
 
   /**
-   * Encrypts the database encryption key.
+   * Encrypts the database encryption key based on a user-supplied password (used to derive a key with PBKDF2) using AES-GCM.
    * @param key the database encryption key (from {@link generateDBKey()}) to encrypt.
    * @param password the password with which to encrypt the key.
-   * @param salt the salt to be used in encrypting the key.
-   * @param nonce the initialization vector to be used in encrypting the key.
+   * @param salt the salt to be used in PBKDF2 (generate with {@link generateRandomBytes}).
+   * @param nonce the initialization vector to be used in encrypting the key (generate with {@link generateRandomBytes}).
    */
   static async encryptDBKey (key: StringifiedBuffer, password: string, salt: string, nonce: string): Promise<string> {
     const keySigningKey = await Crypto.deriveKeySigningKey(password, salt)
@@ -98,6 +98,13 @@ export default class Crypto {
     return Crypto.bufToStr(new Uint8Array(cipherBuffer))
   }
 
+  /**
+   * Decrypts the database encryption key using a user-supplied password (used to derive a key with PBKDF2) using AES-GCM.
+   * @param encryptedKey the encrypted key from the database.
+   * @param password the password with which to encrypt the key.
+   * @param salt the salt to be used in PBKDF2 (generate with {@link generateRandomBytes}).
+   * @param nonce the initialization vector to be used in encrypting the key (generate with {@link generateRandomBytes}).
+   */
   static async decryptDBKey (encryptedKey: string, password: string, salt: string, nonce: string): Promise<string | never> {
     const keySigningKey = await Crypto.deriveKeySigningKey(password, salt)
     const aesGcmConfig: AesGcmParams = {
@@ -109,11 +116,17 @@ export default class Crypto {
     return Crypto.bufToStr(new Uint8Array(cipherBuffer))
   }
 
+  /**
+   * Derives a key, based on a user-provided password, with which to encrypt the database encryption key using PBKDF2.
+   * @param password the raw user password from which to derive a key.
+   * @param salt a random salt for PBKDF2.
+   */
   private static async deriveKeySigningKey (password: string, salt: string): Promise<CryptoKey> {
     const passwordBuffer = Crypto.encoder.encode(password)
     const passwordKey = await crypto.subtle.importKey('raw', passwordBuffer, 'PBKDF2', false, ['deriveKey'])
     const derivationConfig: Pbkdf2Params = { ...Crypto.PBKDF2_CONFIG, salt: Crypto.strToBuf(salt) }
-    return crypto.subtle.deriveKey(derivationConfig, passwordKey, Crypto.AES_KEYGEN_PARAMS, false, ['encrypt', 'decrypt'])
+    return crypto.subtle.deriveKey(derivationConfig,passwordKey, Crypto.AES_KEYGEN_PARAMS, false,
+      ['encrypt', 'decrypt'])
   }
 
   /**

@@ -13,8 +13,12 @@ type PasswordOverlayState = {
 export default class PasswordOverlay extends React.PureComponent<PasswordOverlayProps, PasswordOverlayState> {
   readonly state = { input: '', failure: false }
 
+  handleInput = (event, { value }) => {
+    this.setState({ input: value })
+  }
+
   handleSubmit = () => {
-    DB.Instance.decrypt(this.state.input).then(success => {
+    DB.Instance.decrypt(this.state.input).then((success: boolean) => {
       if (success) {
         this.props.onDBUnlocked()
       } else {
@@ -24,10 +28,6 @@ export default class PasswordOverlay extends React.PureComponent<PasswordOverlay
       this.setState({ failure: true })
       console.error(`Error unlocking DB of type ${e.name} with message ${e.message}`)
     })
-  }
-
-  handleInput = (event, { value }) => {
-    this.setState({ input: value })
   }
 
   render () {
