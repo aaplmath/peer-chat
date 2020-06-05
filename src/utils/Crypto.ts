@@ -27,7 +27,7 @@ export default class Crypto {
   private static readonly encoder = new TextEncoder()
 
   static async generateKeypair (): Promise<CryptoKeyPair> {
-    return crypto.subtle.generateKey(Crypto.ECDSA_KEYGEN_CONFIG, true, ['sign', 'verify'])
+    return crypto.subtle.generateKey(Crypto.ECDSA_KEYGEN_CONFIG, false, ['sign', 'verify'])
   }
 
   /**

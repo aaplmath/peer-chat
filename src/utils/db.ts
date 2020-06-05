@@ -93,7 +93,7 @@ export default class DB {
    * @return true if the password is successfully set or false if it is not (i.e., there is already a password).
    */
   public async setPassword (password: string) {
-    if (await this.encryptionKeyExists()) return false // should be using changePassword() instead
+    if (await this.encryptionKeyExists()) return false // the caller should be using changePassword() instead
 
     try {
       const salt = Crypto.generateRandomBytes(16)
@@ -225,7 +225,9 @@ export default class DB {
     this.db.post(doc) // prefer a random ID so nothing about the chat message is leaked in the unencrypted ID field
   }
 
-  // Storing "wrapped" keypairs fails in both Firefox and Safari. So this is a Chrome-only app for the time being…
+  // Storing keypairs without exporting inexplicably fails in both Firefox and Safari.
+  // Probably a PouchDB issue since https://jsfiddle.net/7t29wynd/1/ works.
+  // So this is a Chrome-only app for the time being…
   /**
    * Writes a new keypair to the database and updates the ID of the self object. WARNING: This deletes the old keypair and self.
    * @param keypair the keypair to write.
@@ -233,7 +235,7 @@ export default class DB {
   public async writeKeypair (keypair: CryptoKeyPair) {
     try {
       const oldKeypair = await this.db.get('keypair')
-      this.db.remove(oldKeypair)
+      await this.db.remove(oldKeypair)
     } catch {} // If there's no old keypair to remove, that (probably) just means this is the first login
     const doc = {
       ...keypair,
@@ -318,9 +320,10 @@ export default class DB {
   }
 
   /**
-   * Destroys the database and everything in it.
+   * Destroys the database and everything in it. Also deletes local storage.
    */
   public async destroy () {
+    localStorage.clear()
     return this.db.destroy()
   }
 
