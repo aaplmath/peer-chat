@@ -21,6 +21,7 @@ type ActiveContactPaneState = {
 }
 
 export default class ActiveContactPane extends React.PureComponent<ActiveContactPaneProps, ActiveContactPaneState> {
+  private static readonly GROUPING_TIME_INTERVAL_MS = 60 * 1000
   readonly state = {
     input: '',
     currentID: undefined,
@@ -101,7 +102,20 @@ export default class ActiveContactPane extends React.PureComponent<ActiveContact
     const { contact, self } = this.props
     const { messages, input } = this.state
     const connected = RTCManager.Instance.currentConfig.connected && RTCManager.Instance.currentConfig.contactID === contact.id
-    const meName = UserUtils.fullNameWithLeadingAvatar({ ...self, firstName: 'Me', lastName: null }) // a little hacky…
+
+    const groupedMessages = messages.reduce((acc, cur) => {
+      const prev = acc[acc.length - 1]
+      if (prev === undefined
+        || prev[0].senderID !== cur.senderID
+        || cur.timestamp > prev[prev.length - 1].timestamp + ActiveContactPane.GROUPING_TIME_INTERVAL_MS) {
+        return acc.concat([[cur]])
+      } else {
+        let res = acc.concat()
+        res[res.length - 1] = res[res.length - 1].concat(cur)
+        return res
+      }
+    }, [])
+
     return (
       <>
         <Grid>
@@ -123,17 +137,7 @@ export default class ActiveContactPane extends React.PureComponent<ActiveContact
         <Divider />
 
         <ScrollableCommentGroup>
-          {messages.length === 0 ?
-            <Header as='h3' color='grey'>No messages yet</Header>
-            : messages.map((message, idx) => (
-            <Comment key={idx} className='chat-item'>
-              <Comment.Content>
-                <Comment.Author as='span'>{message.senderType === SenderType.ME ? meName : UserUtils.fullNameWithLeadingAvatar(contact)}</Comment.Author>
-                <Comment.Metadata>{new Date(message.timestamp).toLocaleString()}</Comment.Metadata>
-                <Comment.Text>{message.content}</Comment.Text>
-              </Comment.Content>
-            </Comment>
-          ))}
+          <ChatMessageList groupedMessages={groupedMessages} self={self} contact={contact} />
         </ScrollableCommentGroup>
         <Divider />
 
@@ -142,6 +146,29 @@ export default class ActiveContactPane extends React.PureComponent<ActiveContact
             <Form.Input action='Send' value={input} onChange={this.handleInput} />
           </Form>
           : <Message warning>You must connect before chatting.</Message>}
+      </>
+    )
+  }
+}
+
+class ChatMessageList extends React.PureComponent<{ groupedMessages: ChatMessage[][], self: User, contact: User }> {
+  render () {
+    const { groupedMessages, self, contact } = this.props
+    const meName = UserUtils.fullNameWithLeadingAvatar({ ...self, firstName: 'Me', lastName: null }) // a little hacky…
+  
+    return (
+      <>
+        {groupedMessages.length === 0 ?
+          <Header as='h3' color='grey'>No messages yet</Header>
+        : groupedMessages.map((messageGroup, idx) => (
+          <Comment key={idx} className='chat-item'>
+            <Comment.Content>
+              <Comment.Author as='span'>{messageGroup[0].senderType === SenderType.ME ? meName : UserUtils.fullNameWithLeadingAvatar(contact)}</Comment.Author>
+              <Comment.Metadata>{new Date(messageGroup[0].timestamp).toLocaleString()}</Comment.Metadata>
+              {messageGroup.map((message, idx) => <Comment.Text key={idx}>{message.content}</Comment.Text>)}
+            </Comment.Content>
+          </Comment>
+        ))}
       </>
     )
   }
