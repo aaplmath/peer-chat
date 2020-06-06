@@ -11,7 +11,6 @@ import ScrollableCommentGroup from './ScrollableCommentGroup'
 type ActiveContactPaneProps = {
   contact: User,
   self: User,
-  contactUpdateHandler: (contact: User) => void
 }
 
 type ActiveContactPaneState = {
@@ -54,11 +53,10 @@ export default class ActiveContactPane extends React.PureComponent<ActiveContact
   }
 
   handleContactUpdate = (fieldName, value) => {
-    const contact = { ...this.props.contact, [fieldName]: value }
-    DB.Instance.putContact(contact).then(() => {
-      this.props.contactUpdateHandler(contact)
-    })
+    const contact = {...this.props.contact, [fieldName]: value}
+    DB.Instance.putContact(contact)
   }
+
 
   handleConnectionChange = (connected: boolean) => {
     // TODO: Find a more elegant approach than forceUpdate()

@@ -15,7 +15,6 @@ const DESC = -1
 type ContactsListProps = {
   contacts: User[],
   selectionHandler: (contact: User) => void,
-  newContactHandler: (contact: User) => void,
   self: User | undefined
 }
 
@@ -38,7 +37,6 @@ export default class ContactsList extends React.PureComponent<ContactsListProps,
   }
 
   handleNewContact = (contact: User) => {
-    this.props.newContactHandler(contact)
     this.setState({ activeID: contact.id })
     this.props.selectionHandler(contact)
   }
@@ -83,7 +81,7 @@ export default class ContactsList extends React.PureComponent<ContactsListProps,
       const input = this.state.searchInput
       if (input !== '') {
         const search = this.state.searchInput.trim().toLowerCase()
-        // contact.fullName() is guaranteed to be non-null, so we don't need to safety-check it like we do contact.avatar
+        // fullName() is guaranteed to be non-null, so we don't need to safety-check it like we do contact.avatar
         return UserUtils.fullName(contact).trim().toLowerCase().indexOf(search) > -1
           || (contact.avatar && contact.avatar.trim().toLowerCase().indexOf(search) > -1)
       }

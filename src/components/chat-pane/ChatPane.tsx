@@ -6,8 +6,7 @@ import NoContactPane from './NoContactPane'
 
 type ChatPaneProps = {
   contact?: User,
-  self: User | undefined,
-  contactUpdateHandler: (contact: User) => void
+  self: User | undefined
 }
 
 export default class ChatPane extends React.PureComponent<ChatPaneProps> {
@@ -16,8 +15,7 @@ export default class ChatPane extends React.PureComponent<ChatPaneProps> {
     return (
       <Segment placeholder={!ready}>
         {ready ? <ActiveContactPane contact={this.props.contact}
-                                    self={this.props.self}
-                                    contactUpdateHandler={this.props.contactUpdateHandler} />
+                                    self={this.props.self} />
           : <NoContactPane />}
       </Segment>
     )

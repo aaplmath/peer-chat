@@ -42,10 +42,16 @@ export enum DBError {
   NO_KEYDOC = 'NoKeydocError'
 }
 
+// TODO: The database is currently returning DOC types, NOT the actual User/ChatMessage/etc., and thus polluting state objects. FIX THIS!!!
+
 // TODO: ERROR HANDLING!
 export default class DB {
   private static _instance: DB
   private readonly db: PouchDB.Database<Docs>
+
+  // As with RTCManager, this isn't an ideal callback setup; however, given its limited use in the app, it's okay for now…
+  public onNewContact: (contact: User) => void
+  public onUpdatedContact: (contact: User) => void
 
   public static get Instance () {
     return this._instance || (this._instance = new this())
@@ -288,8 +294,9 @@ export default class DB {
    * @param contact the new contact info to write or update.
    */
   public async putContact (contact: User) {
-    try {
-      const existingContact = await this.getContact(contact.id)
+    const existingContact = await this.getContact(contact.id)
+    if (existingContact) {
+      // We're updating an existing contact
       const newDoc = {
         ...contact,
         _id: existingContact._id,
@@ -297,13 +304,15 @@ export default class DB {
         type: DocType.CONTACT
       }
       this.db.put(newDoc)
-    } catch {
-      // We're adding a new contact; nothing to worry about
+      if (this.onUpdatedContact) this.onUpdatedContact(contact)
+    } else {
+      // We're adding a new contact
       const newDoc = {
         ...contact,
         type: DocType.CONTACT
       }
       this.db.post(newDoc) // We *want* a random ID because we don't want to leak anything traceable to the contact in the unencrypted _id field
+      if (this.onNewContact) this.onNewContact(contact)
     }
 
   }

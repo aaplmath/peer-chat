@@ -118,6 +118,9 @@ export default class RTCManager {
         urls: 'stun:stun.l.google.com:19302'
       }]
     }
+    if (this.connection && 'close' in this.connection) {
+      this.connection.close()
+    }
     try {
       this.connection = new RTCPeerConnection(configuration)
       this.connection.addEventListener('icecandidate', this.onIceCandidate)

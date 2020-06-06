@@ -7,6 +7,9 @@ import DB from '../../utils/db'
 
 type AddContactModalProps = {
   self: User,
+
+  // Below is called IMMEDIATELY after the new contact is added and BEFORE info customization.
+  // Data other than ID should be considered unusable.
   callback: (contact: User) => void
 }
 
@@ -46,11 +49,18 @@ export default class AddContactModal extends React.PureComponent<AddContactModal
       } else {
         // Contact is good; continue…
         this.setState({ contactID, activeStep: 2 })
-        RTCManager.Instance.requestConnection(this.props.self, contactID, true).then((userInfo: User) => {
+        RTCManager.Instance.requestConnection(this.props.self, contactID, true).then((userInfo: User | any) => {
           if (userInfo === undefined) {
             this.setState({ activeStep: 'error' })
           } else {
-            this.setState({ activeStep: 3, addedUser: userInfo })
+            // Ensure the doc that's sent doesn't mess with the DB
+            if ('_rev' in userInfo) delete userInfo._rev
+            if ('_id' in userInfo) delete userInfo._id
+
+            DB.Instance.putContact(userInfo).then(() => {
+              this.props.callback(userInfo)
+              this.setState({ activeStep: 3, addedUser: userInfo })
+            })
           }
         }, () => {
           this.setState({ activeStep: 'error' })
@@ -61,9 +71,8 @@ export default class AddContactModal extends React.PureComponent<AddContactModal
 
   handleCompletion = (contact: User) => {
     DB.Instance.putContact(contact).then(() => {
-      this.props.callback(contact)
+      this.handleClose()
     })
-    this.handleClose()
   }
 
   handleReset = () => {

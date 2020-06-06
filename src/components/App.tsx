@@ -91,7 +91,7 @@ export default class App extends React.PureComponent<{}, AppState> {
 
   handleContactUpdate = (contact: User) => {
     this.setState(state => ({ contacts: state.contacts.map(cnt => cnt.id === contact.id ? contact : cnt) }))
-    // For now, the updated contact is always the selected contact, but in a better-designed version of the app, that might not be true…
+    // Since we get contact update callbacks asynchronously from the database, the updated contact may or may not be the selected user; if it is, we need to update
     if (contact.id === this.state.selectedContact.id) {
       this.handleContactSelection(contact)
     }
@@ -114,6 +114,9 @@ export default class App extends React.PureComponent<{}, AppState> {
         this.setState({ self, needsInitialization: true })
       }
     })
+
+    DB.Instance.onNewContact = this.handleNewContact
+    DB.Instance.onUpdatedContact = this.handleContactUpdate
   }
 
   render () {
@@ -135,10 +138,10 @@ export default class App extends React.PureComponent<{}, AppState> {
         <Container>
           <Grid>
             <Grid.Column width={4}>
-              <ContactsList contacts={contacts} selectionHandler={this.handleContactSelection} self={self} newContactHandler={this.handleNewContact} />
+              <ContactsList contacts={contacts} selectionHandler={this.handleContactSelection} self={self} />
             </Grid.Column>
             <Grid.Column width={12}>
-              <ChatPane contact={selectedContact} self={self} contactUpdateHandler={this.handleContactUpdate} />
+              <ChatPane contact={selectedContact} self={self} />
             </Grid.Column>
           </Grid>
         </Container>
