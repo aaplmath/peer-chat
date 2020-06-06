@@ -1,7 +1,7 @@
 import React from 'react'
 import { Accordion, Button, Icon, List, Modal } from 'semantic-ui-react'
 
-const HOW_IT_WORKS_CONTENT = [
+const HOW_IT_WORKS_CONTENT: { title: string, body: React.ReactFragment }[] = [
   {
     title: 'How to Use PeerChat',
     body: (<>
@@ -91,7 +91,7 @@ const HOW_IT_WORKS_CONTENT = [
             actually generates two unique identifiers for each profile&mdash;a <em>verification key</em>, which is turned into a
             PeerChat ID; and a <em>signing key</em>, which is used to validate any information sent in the establishment of a connection.
             When you connect to a user in PeerChat, every message sent in establishing the peer-to-peer connection bears a cryptographic
-            signature that can only be generated using the secret signing key. The recipient can use the verification key (i.e., the
+            signature generated using the secret signing key. The recipient can use the verification key (i.e., the
             sender's PeerChat ID) to verify that the signature is authentic&mdash;only the secret signing key (which is encrypted in the
             sender's database as described above) can generate a signature that matches the sender's PeerChat ID.</p>
         </List.Item>
@@ -118,7 +118,7 @@ const HOW_IT_WORKS_CONTENT = [
       current chat conversation&mdash;the parties involved, the connection status, and so forth&mdash;is managed by the chat pane,
       which passes down just a list of messages to the scrollable message list component as properties&mdash;the message list
       component is unaware of, and cannot modify, the higher-level state, but instead receives input based indirectly
-      on that state and adjusts its output accordingly.)
+      on that state and produces UI as output accordingly.)
     </>)
   }
 ]
