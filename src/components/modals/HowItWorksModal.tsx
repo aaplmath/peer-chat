@@ -16,7 +16,10 @@ const HOW_IT_WORKS_CONTENT: { title: string, body: React.ReactFragment }[] = [
       <br />< br/>
       To chat with an existing contact, select the contact from the contact list, then click "Connect." Your contact must do the same
       simultaneously. The chat view will then appear. Note that you may have only one active conversation at a time&mdash;if you are
-      chatting with one contact, you won't be able to receive messages from any others.
+      chatting with one contact, you won't be able to receive messages from any others. Once you establish a connection with a contact,
+      that connection will remain open until you close or reload the page or initiate a new connection with another contact (or attempt
+      to add a new contact).
+      <br /><br />
     </>)
   },
   {
