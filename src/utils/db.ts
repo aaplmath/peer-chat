@@ -52,6 +52,7 @@ export default class DB {
   // As with RTCManager, this isn't an ideal callback setup; however, given its limited use in the app, it's okay for now…
   public onNewContact: (contact: User) => void
   public onUpdatedContact: (contact: User) => void
+  public onRemovedContactWithID: (contactID: string) => void
 
   public static get Instance () {
     return this._instance || (this._instance = new this())
@@ -325,7 +326,7 @@ export default class DB {
     const doc = await this.getContact(contactID)
     await this.db.remove(doc)
     const messageDocs = (await this.getMessagesForContact(contactID)).docs
-    return this.db.bulkDocs(messageDocs.map(obj => ({ ...obj, _id: obj._id, _rev: obj._rev, _deleted: true })))
+    this.db.bulkDocs(messageDocs.map(obj => ({ ...obj, _id: obj._id, _rev: obj._rev, _deleted: true }))).then(() => { this.onRemovedContactWithID(contactID) })
   }
 
   /**

@@ -94,8 +94,12 @@ export default class RTCManager {
       this.pendingPromise.resolve = (data?: User) => {
         window.clearTimeout(this.currentConfig.timeout)
         res(data)
+        this.pendingPromise = { resolve: undefined, reject: undefined }
       }
-      this.pendingPromise.reject = rej || (() => {})
+      this.pendingPromise.reject = () => {
+        this.pendingPromise = { resolve: undefined, reject: undefined }
+        if (rej) rej()
+      }
     })
     this.currentConfig.timeout = window.setTimeout(this.onRequestFailure, this.REQ_TIMEOUT_MILLIS)
     return promise
@@ -111,6 +115,15 @@ export default class RTCManager {
     }
   }
 
+  /**
+   * Disconnects the peer connection if one is active.
+   */
+  public disconnect = () => {
+    if (this.connection && 'close' in this.connection) {
+      this.connection.close()
+    }
+  }
+
   private initializePeerConnection = () => {
     console.log('initializing peer connection')
     const configuration: RTCConfiguration = {
@@ -118,9 +131,7 @@ export default class RTCManager {
         urls: 'stun:stun.l.google.com:19302'
       }]
     }
-    if (this.connection && 'close' in this.connection) {
-      this.connection.close()
-    }
+    this.disconnect()
     try {
       this.connection = new RTCPeerConnection(configuration)
       this.connection.addEventListener('icecandidate', this.onIceCandidate)
@@ -135,9 +146,9 @@ export default class RTCManager {
     console.log(`data channel ${event.channel.label} established`)
     this.channel = event.channel
     console.log(this.channel.label + ' channel is stored')
-    if (this.currentConfig.isNewContact) {
-      this.channel.addEventListener('open', this.sendInitialContactInfo)
-    }
+    // Send contact info no matter what; even if the contact already exists on our end,
+    // we might no longer be in the contact's list (and their connection will stall if we don't send our info)
+    this.channel.addEventListener('open', this.sendInitialContactInfo)
     this.channel.addEventListener('message', this.onMessage)
   }
 

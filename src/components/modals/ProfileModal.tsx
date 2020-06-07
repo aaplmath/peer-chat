@@ -23,11 +23,12 @@ type ProfileModalProps = {
 }
 
 type ProfileModalState = {
+  open: boolean,
   advancedShown: boolean
 }
 
 export default class ProfileModal extends React.PureComponent<ProfileModalProps, ProfileModalState> {
-  readonly state = { advancedShown: false }
+  readonly state = { open: false, advancedShown: false }
   private timeoutInst: { [key: string]: number | undefined } = {} // holds timeouts for each input field so we don't overwhelm the parent (which is triggering DB writes)
 
   handleInput = (fieldName, value) => {
@@ -53,11 +54,14 @@ export default class ProfileModal extends React.PureComponent<ProfileModalProps,
     })
   }
 
+  openSelf = () => { this.setState({ open: true }) }
+  closeSelf = () => { this.setState({ open: false }) }
+
   render () {
     return (
-      <Modal size='small' trigger={
-        <Menu.Item>{UserUtils.fullNameWithLeadingAvatar(this.props.user)}</Menu.Item>
-      } closeIcon>
+      <Modal size='small' open={this.state.open} trigger={
+        <Menu.Item onClick={this.openSelf}>{UserUtils.fullNameWithLeadingAvatar(this.props.user)}</Menu.Item>
+      } onClose={this.closeSelf} closeIcon>
         <Modal.Header>{this.props.isOwnProfile ? 'My Profile' : 'Contact Details'}</Modal.Header>
         <Modal.Content>
           <Header as='h3'>PeerChat ID</Header>
@@ -73,7 +77,7 @@ export default class ProfileModal extends React.PureComponent<ProfileModalProps,
               <Divider />
             </>}
 
-          {!this.props.isOwnProfile ? <ContactRemovalModal contact={this.props.user} /> :
+          {!this.props.isOwnProfile ? <ContactRemovalModal contact={this.props.user} onConfirm={this.closeSelf} /> :
             <Accordion styled fluid>
               <Accordion.Title active={this.state.advancedShown} onClick={this.toggleAdvanced}>
                 <Icon name='dropdown' />Show advanced options</Accordion.Title>

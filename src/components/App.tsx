@@ -97,6 +97,13 @@ export default class App extends React.PureComponent<{}, AppState> {
     }
   }
 
+  handleContactRemoval = (contactID: string) => {
+    this.setState(state => ({
+      contacts: state.contacts.filter(contact => contact.id !== contactID),
+      selectedContact: state.selectedContact.id === contactID ? undefined : state.selectedContact
+    }))
+  }
+
   handleProfileDeletion = () => {
     this.setState({ profileDeleted: true })
   }
@@ -117,6 +124,7 @@ export default class App extends React.PureComponent<{}, AppState> {
 
     DB.Instance.onNewContact = this.handleNewContact
     DB.Instance.onUpdatedContact = this.handleContactUpdate
+    DB.Instance.onRemovedContactWithID = this.handleContactRemoval
   }
 
   render () {
