@@ -24,34 +24,25 @@ const port = process.env.PORT || 3000
 server.listen(port, () => { console.log('server listening on port ' + port) })
 
 io.on('connection', socket => {
-  console.log('got a client')
   // N.b. the server does NOT perform any security checks or attempt to limit room entry.
   // Clients are designed to act as though the server is adversarial; they will perform their own checks.
   socket.on('request connection', request => {
     const room = generateRoomName(request)
-    console.log(`connection request for room ${room.slice(0, 3) + '...' + room.slice(room.length - 3)} by ${socket.id}`)
     socket.join(room)
     const clients = io.sockets.adapter.rooms[room] ? io.sockets.adapter.rooms[room].length : 0
     // TODO: handle race condition
     if (clients > 1) {
       socket.emit('await offer')
-      console.log(`await assignment given to ${socket.id}`)
       // TODO: verify that this was received before starting the process
       io.to(room).emit('begin connection')
     } else {
       socket.emit('send offer')
-      console.log(`send assignment given to ${socket.id}`)
     }
     socket.on('message', message => {
-      console.log(`message received of type ${message.message.type} from ${socket.id}`)
       socket.broadcast.to(room).emit('message', message)
     })
     socket.on('abandoning', () => {
       socket.broadcast.to(room).emit('abandon')
     })
-  })
-
-  socket.on('disconnect', () => {
-    console.log(`client disconnect: ${socket.id}`)
   })
 })
