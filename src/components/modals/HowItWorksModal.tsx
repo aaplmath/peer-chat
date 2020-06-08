@@ -35,7 +35,10 @@ const HOW_IT_WORKS_CONTENT: { title: string, body: React.ReactFragment }[] = [
       Technically speaking, however, peer-to-peer communication (at least as PeerChat is configured) is not truly "serverless."
       This is because both clients must be able to exchange "contact information"&mdash;that is, where they're located on the
       Internet and how they can be contacted. Once this initial exchange is complete, all communication can be performed without
-      a server. The process for establishing a connection is (roughly) as follows:
+      a server. (In fact, once a peer-to-peer connection is established, PeerChat <em>is</em> entirely serverless&mdash;all chat
+      records and profile information are stored locally and encrypted in the browser's database. This is why PeerChat only works
+      if both users are connected at the same time&mdash;there's no server to "hold onto" messages for later delivery.)
+      The process for establishing a connection is (roughly) as follows:
       <br />
       <List bulleted>
         <List.Item>The initiating client establishes a connection to a <em>signaling server</em> (which is specific to PeerChat)
