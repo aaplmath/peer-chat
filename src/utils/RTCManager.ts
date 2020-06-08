@@ -75,7 +75,7 @@ export default class RTCManager {
     this.currentConfig.connected = false
     this.initializePeerConnection()
     if (!this.socket) {
-      this.socket = io.connect('http://localhost:8080', { secure: false })
+      this.socket = io()
       this.socket.on('message', (msg) => { this.onSocketMessage(msg, recipientID) })
       this.socket.on('send offer', () => { this.currentConfig.isInitiator = true })
       this.socket.on('await offer', () => { this.currentConfig.isInitiator = false })
