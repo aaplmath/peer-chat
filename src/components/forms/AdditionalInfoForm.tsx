@@ -56,7 +56,7 @@ export default class AdditionalInfoForm extends React.PureComponent<AdditionalIn
               {showEmoji && <Picker showPreview={false} autoFocus
                                     style={{ position: 'absolute', zIndex: 100, bottom: '100%' }}
                                     onSelect={this.handleEmojiSelect} />}
-              <Form.Button primary content='Set Emoji' onClick={this.handleToggleEmoji} className='inline-button' size='tiny' inline />
+              <Form.Button primary content='Set Avatar' onClick={this.handleToggleEmoji} className='inline-button' size='tiny' inline />
               <Form.Button secondary content='Clear' onClick={this.handleClearEmoji} disabled={!avatar} className='inline-button' size='tiny' inline />
             </Segment>
           </Grid.Column>
