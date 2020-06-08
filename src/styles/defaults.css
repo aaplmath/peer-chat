@@ -117,3 +117,6 @@
 .how-it-works-modal .title {
     border: 1px solid rgba(34,36,38,1)
 }
+.code-link, .code-link:hover {
+    text-decoration: underline;
+}

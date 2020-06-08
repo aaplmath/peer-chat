@@ -8,10 +8,10 @@ import FirstVisitModal from './modals/FirstVisitModal'
 import DB from '../utils/db'
 import Crypto from '../utils/Crypto'
 import ProfileDeletedOverlay from './overlays/ProfileDeletedOverlay'
-import '../styles/defaults.css'
 import PasswordOverlay from './overlays/PasswordOverlay'
 import UnsupportedBrowserOverlay from './overlays/UnsupportedBrowserOverlay'
-require('semantic-ui-css/semantic.min.css')
+import 'semantic-ui-css/semantic.min.css'
+import '../styles/defaults.css'
 
 type AppState = {
   selectedContact?: User,

@@ -145,7 +145,6 @@ export default class RTCManager {
   private onDataChannel = (event: any | { channel: RTCDataChannel }) => {
     console.log(`data channel ${event.channel.label} established`)
     this.channel = event.channel
-    console.log(this.channel.label + ' channel is stored')
     // Send contact info no matter what; even if the contact already exists on our end,
     // we might no longer be in the contact's list (and their connection will stall if we don't send our info)
     this.channel.addEventListener('open', this.sendInitialContactInfo)
