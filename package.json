@@ -25,13 +25,12 @@
     "typescript": "^3.7.5"
   },
   "scripts": {
-    "start": "nodemon --exec ts-node src/index.ts",
+    "start": "node server.js",
     "start-react": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "build-server": "tsc --esModuleInterop server.ts",
-    "start-server": "node server.js"
+    "build-server": "tsc --esModuleInterop server.ts"
   },
   "browserslist": {
     "production": [
@@ -46,7 +45,6 @@
     ]
   },
   "devDependencies": {
-    "@types/socket.io-client": "^1.4.33",
-    "nodemon": "2.0.0"
+    "@types/socket.io-client": "^1.4.33"
   }
 }
