@@ -25,12 +25,9 @@ const HOW_IT_WORKS_CONTENT: { title: string, body: React.ReactFragment }[] = [
   {
     title: 'Peer-to-Peer Messaging',
     body: (<>
-      Many traditional chat services work by relaying your messages from your computer to a third-party server,
-      which forwards them to the intended recipient. However, in a peer-to-peer environment, your messages are relayed directly from
-      your computer to your recipient's device. This offers many potential advantages in terms of
-      efficiency (there's no need to send messages by way of another server)
-      and security (though not necessarily the case, the protocol PeerChat uses&mdash;if implemented correctly&mdash;
-      can mitigate several typical Internet security issues).
+      Many traditional chat services work by sending your messages from your computer to a third-party server,
+      which relays them to the intended recipient. However, in a peer-to-peer environment, your messages are sent directly from
+      your computer to your recipient's device, eschewing the need for a third-party relay.
       <br /><br />
       Technically speaking, however, peer-to-peer communication (at least as PeerChat is configured) is not truly "serverless."
       This is because both clients must be able to exchange "contact information"&mdash;that is, where they're located on the
@@ -42,10 +39,11 @@ const HOW_IT_WORKS_CONTENT: { title: string, body: React.ReactFragment }[] = [
       <br />
       <List bulleted>
         <List.Item>The initiating client establishes a connection to a <em>signaling server</em> (which is specific to PeerChat)
-          and requests a connection with a client based on an ID (in this case, the client's PeerChat ID). The initiator sends
-          an <em>offer</em> describing the parameters of the session it would like to establish (in the case of PeerChat,
+          and requests a connection with another client, whom the initiator identifies using an anonymous token derived from
+          the two users' PeerChat IDs (thus preventing the signaling server from gleaning who is attempting to communicate with whom).
+          The initiator sends an <em>offer</em> describing the parameters of the session it would like to establish (in the case of PeerChat,
           a single data stream for sending and receiving text messages). The signaling server then "announces" this offer to all parties
-          currently "listening" who match the specified ID (which they declare to the signaling server upon connecting).</List.Item>
+          who have provided the same anonymous token (which clients declare upon connecting to the signaling server).</List.Item>
         <List.Item>The initiating client also queries a <em>STUN server</em> (PeerChat uses Google's) to determine how it (the client)
           can be contacted by a peer elsewhere on the Internet (a bit like asking your mobile carrier what phone number you've been
           assigned). It sends this information (known as <em>ICE candidates</em>) to the signaling server for forwarding to

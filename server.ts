@@ -3,13 +3,6 @@ import * as path from 'path'
 import express from 'express'
 import socketio from 'socket.io'
 
-type ConnectionRequest = {
-  sender: string,
-  recipient: string
-}
-
-const generateRoomName = (req: ConnectionRequest) => [req.sender, req.recipient].sort().join('-')
-
 const app: express.Application = express()
 const server = http.createServer(app)
 const io = socketio(server)
@@ -26,23 +19,22 @@ server.listen(port, () => { console.log('server listening on port ' + port) })
 io.on('connection', socket => {
   // N.b. the server does NOT perform any security checks or attempt to limit room entry.
   // Clients are designed to act as though the server is adversarial; they will perform their own checks.
-  socket.on('request connection', request => {
-    const room = generateRoomName(request)
-    socket.join(room)
-    const clients = io.sockets.adapter.rooms[room] ? io.sockets.adapter.rooms[room].length : 0
+  socket.on('request connection', roomName => {
+    socket.join(roomName)
+    const clients = io.sockets.adapter.rooms[roomName] ? io.sockets.adapter.rooms[roomName].length : 0
     // TODO: handle race condition
     if (clients > 1) {
       socket.emit('await offer')
       // TODO: verify that this was received before starting the process
-      io.to(room).emit('begin connection')
+      io.to(roomName).emit('begin connection')
     } else {
       socket.emit('send offer')
     }
     socket.on('message', message => {
-      socket.broadcast.to(room).emit('message', message)
+      socket.broadcast.to(roomName).emit('message', message)
     })
     socket.on('abandoning', () => {
-      socket.broadcast.to(room).emit('abandon')
+      socket.broadcast.to(roomName).emit('abandon')
     })
   })
 })

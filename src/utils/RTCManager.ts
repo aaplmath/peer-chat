@@ -86,9 +86,8 @@ export default class RTCManager {
     }
 
     console.log('sending connection request to server')
-    this.socket.emit('request connection',{
-      sender: self.id,
-      recipient: recipientID
+    this.generateRoomName(self.id, recipientID).then(roomName => {
+      this.socket.emit('request connection', roomName)
     })
     const promise = new Promise((res: (data?: User) => void, rej: () => void) => {
       this.pendingPromise.resolve = (data?: User) => {
@@ -254,6 +253,20 @@ export default class RTCManager {
       signature
     }
     this.socket.emit('message', signedMessage)
+  }
+
+  /**
+   * Generates the name of the room that the clients will share for signaling. For privacy reasons, the derivation
+   * of the room name should be one-way (in this case, a SHA-256 hash of the two IDs).
+   *
+   * @param selfID the user's own ID.
+   * @param recipientID the ID of the user to whom to connect.
+   */
+  private async generateRoomName (selfID: string, recipientID: string): Promise<string> {
+    const idConcat = recipientID > selfID ? recipientID + selfID : selfID + recipientID
+    const dataBuf = Crypto.strToBuf(idConcat)
+    const digest = await crypto.subtle.digest('SHA-256', dataBuf)
+    return Crypto.bufToStr(new Uint8Array(digest))
   }
 
   private verifyMessageFormat (message: any): message is SignedMessage {

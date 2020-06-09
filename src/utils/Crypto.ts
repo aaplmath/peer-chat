@@ -135,7 +135,7 @@ export default class Crypto {
    * NOTE: if the buffer corresponds to actual encoded text, use {@link TextDecoder}.
    * @param buffer the buffer to convert to a string representation.
    */
-  private static bufToStr (buffer: Uint8Array): StringifiedBuffer {
+  public static bufToStr (buffer: Uint8Array): StringifiedBuffer {
     return buffer.reduce((acc, byte) => {
       // Convert the buffer to a string by splitting each byte into 4-bit pieces, then base-16 encoding each
       const low = byte & 0xf
@@ -151,7 +151,7 @@ export default class Crypto {
    * @param str the string to encode.
    * @param prependElements any elements to prepend to the resulting buffer.
    */
-  private static strToBuf (str: string, prependElements: number[] = []): Uint8Array {
+  public static strToBuf (str: string, prependElements: number[] = []): Uint8Array {
     return Uint8Array.from(prependElements.concat(str.match(/.{1,2}/g) // split string into fragments corresponding to original bytes
       .map(byteStr => ((parseInt(byteStr[0], 16) & 0xf) << 4)
         | (parseInt(byteStr[1], 16) & 0xf)))) // get place values back where they should be
