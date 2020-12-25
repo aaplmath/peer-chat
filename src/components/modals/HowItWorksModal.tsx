@@ -150,7 +150,7 @@ export default class HowItWorksModal extends React.PureComponent<{}, HowItWorksM
         <Modal.Content>
           <Modal.Description>
             <p>PeerChat is a <em>peer-to-peer</em>, <em>encrypted</em> chat application built using the <em>React framework</em>.
-              To learn more, check out the descriptions below. Or, if you'd like a peak behind the scenes,
+              To learn more, check out the descriptions below. Or, if you'd like a peek behind the scenes,
               check out the <a href='https://codesandbox.io/s/peerchat-deployment-ecc3m?file=/src/components/App.tsx' className='code-link'>code base on CodeSandbox</a>.</p>
             <Accordion styled fluid>
               {HOW_IT_WORKS_CONTENT.map((item, idx) => (
